@@ -1,0 +1,33 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# OS & Editor files
+.DS_Store
+.aider*
+*.save
+*.swp
+
+# Security & Credentials (절대 커밋 금지)
+.env
+*.key
+*.pem
+
+# Runtime trade & history data (오라클 서버에서 실시간 갱신되는 기록 파일)
+active_trades.json
+history.json
+history_lessons.json
+paper_history.json
+paper_trades.json
+performance_cache.json
+strategy_leaderboard.json
+strategy_state.json
+
+# Logs
+*.log
