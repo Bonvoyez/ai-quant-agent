@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Quant Ops · Position Intelligence</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0A0E13;
+    --panel: #10161D;
+    --panel-alt: #141B23;
+    --border: #212B35;
+    --border-soft: #1A222B;
+    --text: #E7ECF1;
+    --muted: #7C8896;
+    --muted-dim: #4E5A66;
+    --pos: #45C8A0;
+    --pos-dim: #1E4A3E;
+    --neg: #E2574C;
+    --neg-dim: #4A2320;
+    --warn: #E0A83E;
+    --warn-dim: #4A3B1C;
+    --accent: #5B8DEF;
+    --accent-dim: #1E2E4A;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', ui-sans-serif, sans-serif; }
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  .display { font-family: 'Space Grotesk', sans-serif; }
+  code { color: var(--accent); }
+
+  #app { padding: 18px; max-width: 1280px; margin: 0 auto; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); animation: pulse 2.2s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .title { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+  .subtitle { font-size: 10px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
+
+  .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 7px 12px; border-radius: 4px; border: 1px solid var(--border); background: var(--panel-alt);
+    color: var(--text); cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .search {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: var(--panel-alt);
+    border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 6px 8px; width: 130px;
+  }
+  .search:focus-visible { outline: 2px solid var(--accent); }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 14px; }
+  .panel.danger { border-color: var(--neg); }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-soft); }
+  .panel-title { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .panel.danger .panel-title { color: var(--neg); }
+  .panel-body { padding: 14px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
+  .kpi { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+  .kpi-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .kpi-value { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600; line-height: 1.1; }
+  .kpi-sub { font-size: 11px; color: var(--muted-dim); margin-top: 4px; }
+  .pos { color: var(--pos); } .neg { color: var(--neg); } .warn { color: var(--warn); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .grid-main { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-bottom: 14px; }
+
+  .badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 3px; }
+  .badge-win { background: var(--pos-dim); color: var(--pos); }
+  .badge-loss { background: var(--neg-dim); color: var(--neg); }
+  .badge-pending { background: var(--warn-dim); color: var(--warn); }
+  .badge-anomaly { background: var(--neg-dim); color: var(--neg); }
+  .badge-holding { background: var(--accent-dim); color: var(--accent); }
+  .badge-sold { background: var(--pos-dim); color: var(--pos); }
+  .badge-closed { background: var(--muted-dim); color: var(--muted); }
+
+  .signal-strip { display: flex; align-items: flex-end; gap: 3px; height: 46px; }
+  .tick { width: 10px; border-radius: 1.5px; }
+  .legend { display: flex; gap: 14px; margin-top: 10px; font-size: 10px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+  .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 1px; margin-right: 4px; }
+
+  .anomaly-chip { display: inline-flex; align-items: center; gap: 8px; background: var(--neg-dim); border: 1px solid var(--neg); border-radius: 4px; padding: 6px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; margin: 3px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { text-align: left; padding: 6px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+  tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-soft); }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--panel-alt); }
+  .reason-cell { color: var(--muted); max-width: 340px; }
+  .reason-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 300px; vertical-align: middle; }
+  .reason-text.open { white-space: normal; }
+
+  .empty { border: 1px dashed var(--border); border-radius: 8px; padding: 60px 20px; text-align: center; color: var(--muted); }
+  .banner { font-size: 12px; padding: 8px 12px; border-radius: 4px; margin-bottom: 14px; font-family: 'IBM Plex Mono', monospace; }
+  .banner.error { background: var(--neg-dim); border: 1px solid var(--neg); color: var(--neg); }
+  .banner.info { background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); }
+
+  .position-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: var(--panel-alt); border: 1px solid var(--border-soft); border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+
+  svg text { font-family: 'IBM Plex Mono', monospace; }
+
+  @media (max-width: 900px) {
+    .grid-main, .grid2 { grid-template-columns: 1fr !important; }
+    .kpis { grid-template-columns: repeat(2, 1fr) !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      <div>
+        <div class="title display">QUANT OPS</div>
+        <div class="subtitle" id="statusLine">Position Intelligence · 연결 중...</div>
+      </div>
+    </div>
+    <div class="controls">
+      <input class="search" id="searchInput" placeholder="TICKER" />
+      <button class="btn" id="refreshBtn">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div id="banners"></div>
+
+  <div class="panel" id="controlPanel">
+    <div class="panel-head">
+      <span class="panel-title">⚙ Control Panel</span>
+      <span id="settingsStatus" style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;"></span>
+    </div>
+    <div class="panel-body">
+      <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;">
+        <div>
+          <div class="kpi-label">PAUSED</div>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;height:30px;">
+            <input type="checkbox" id="setPaused" style="width:15px;height:15px;accent-color:var(--accent);" />
+            <span style="font-size:12px;">신규 매수 중단</span>
+          </label>
+        </div>
+        <div>
+          <div class="kpi-label">MAX POSITIONS</div>
+          <select id="setMaxPositions" class="search" style="width:64px;">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5</option>
+          </select>
+        </div>
+        <div>
+          <div class="kpi-label">MAX BUDGET (%)</div>
+          <input type="number" id="setMaxBudget" class="search" min="5" max="75" step="1" style="width:76px;" />
+        </div>
+        <div>
+          <div class="kpi-label">MIN CONFIDENCE</div>
+          <input type="number" id="setMinConfidence" class="search" min="0.50" max="0.95" step="0.05" style="width:76px;" />
+        </div>
+        <div>
+          <div class="kpi-label">MAX ATR (%)</div>
+          <input type="number" id="setMaxAtr" class="search" min="1" max="12" step="0.5" style="width:76px;" />
+        </div>
+        <div>
+          <div class="kpi-label">DAILY LOSS CUT (%)</div>
+          <input type="number" id="setDailyLossCut" class="search" min="0.5" max="10" step="0.5" style="width:76px;" />
+        </div>
+        <div>
+          <div class="kpi-label">RISK MODE</div>
+          <select id="setRiskMode" class="search" style="width:150px;">
+            <option value="conservative">Conservative</option>
+            <option value="balanced">Balanced</option>
+            <option value="aggressive">Aggressive</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:200px;">
+          <div class="kpi-label">EXCLUDED TICKERS (콤마 구분)</div>
+          <input type="text" id="setExcluded" class="search" style="width:100%;" placeholder="예: MSTR, RGTI" />
+        </div>
+        <button class="btn" id="saveSettingsBtn">Save Settings</button>
+      </div>
+      <div style="font-size:10px;color:var(--muted-dim);margin-top:10px;">
+        MAX POSITIONS는 매수 목표가 아닌 상한입니다. 조건을 통과한 종목만 매수하며, 없으면 현금을 유지합니다. 저장한 설정은 다음 매매 사이클부터 반영됩니다. PAUSED는 신규 매수만 막고 기존 보유 종목의 익절/손절/강제청산은 계속됩니다.
+      </div>
+    </div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const params = new URLSearchParams(window.location.search);
+  const TOKEN = params.get("token") || "";
+  const REFRESH_MS = 60000;
+
+  const C = {
+    pos: "#45C8A0", posDim: "#1E4A3E",
+    neg: "#E2574C", negDim: "#4A2320",
+    warn: "#E0A83E", warnDim: "#4A3B1C",
+    accent: "#5B8DEF",
+    border: "#212B35", borderSoft: "#1A222B",
+    muted: "#7C8896", mutedDim: "#4E5A66",
+  };
+
+  let STATE = { history: [], activeTrades: [], settings: {}, search: "", expanded: {}, loaded: false };
+
+  function fmtPct(v, digits) {
+    digits = digits === undefined ? 2 : digits;
+    if (v === null || v === undefined || Number.isNaN(v)) return "—";
+    const sign = v > 0 ? "+" : "";
+    return sign + v.toFixed(digits) + "%";
+  }
+
+  function flattenStocks(history) {
+    const rows = [];
+    for (const rec of history || []) {
+      for (const s of rec.stocks || []) rows.push(Object.assign({}, s, { date: rec.date }));
+    }
+    return rows;
+  }
+
+  function computeStreak(history) {
+    const sorted = (history || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    let streak = 0;
+    for (const rec of sorted) {
+      const returns = (rec.stocks || []).map((s) => s.actual_return).filter((v) => typeof v === "number");
+      if (returns.length === 0) break;
+      const avg = returns.reduce((a, b) => a + b, 0) / returns.length;
+      if (avg < 0) streak += 1; else break;
+    }
+    return streak;
+  }
+
+  function budgetRatioForStreak(streak) {
+    const base = { conservative: 0.35, balanced: 0.55, aggressive: 0.75 }[STATE.settings.risk_mode || "balanced"];
+    const streakMultiplier = streak >= 3 ? 0.42 : ({ 0: 1, 1: 0.84, 2: 0.63 }[streak] ?? 1);
+    const dashboardCap = Number(STATE.settings.max_budget_pct ?? 35) / 100;
+    return Math.min(base * streakMultiplier, dashboardCap);
+  }
+
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return "";
+    return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  // ---- SVG chart helpers -------------------------------------------------
+  function scale(value, domain, range) {
+    const [d0, d1] = domain, [r0, r1] = range;
+    if (d1 === d0) return (r0 + r1) / 2;
+    return r0 + ((value - d0) / (d1 - d0)) * (r1 - r0);
+  }
+
+  function lineChartSVG(points, opts) {
+    const w = opts.width, h = opts.height, pad = 28;
+    if (points.length === 0) return `<div class="kpi-sub">데이터가 부족합니다.</div>`;
+    const ys = points.map((p) => p.y);
+    const yMin = Math.min(0, ...ys), yMax = Math.max(0, ...ys);
+    const yPad = (yMax - yMin) * 0.15 || 1;
+    const domain = [yMin - yPad, yMax + yPad];
+    const xs = points.map((_, i) => scale(i, [0, points.length - 1], [pad, w - 10]));
+    const ysS = points.map((p) => scale(p.y, domain, [h - 22, 10]));
+    const zeroY = scale(0, domain, [h - 22, 10]);
+    const path = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${ysS[i].toFixed(1)}`).join(" ");
+    const dots = xs.map((x, i) => `<circle cx="${x.toFixed(1)}" cy="${ysS[i].toFixed(1)}" r="3" fill="${C.accent}"><title>${escapeHtml(points[i].label)}: ${fmtPct(points[i].y)}</title></circle>`).join("");
+    const lastLabel = points.length ? points[points.length - 1].label : "";
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+      <line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w - 10}" y2="${zeroY.toFixed(1)}" stroke="${C.border}" stroke-dasharray="3 3" />
+      <path d="${path}" fill="none" stroke="${C.accent}" stroke-width="2" />
+      ${dots}
+      <text x="${pad}" y="${h - 6}" fill="${C.muted}" font-size="9">${escapeHtml(points[0].label)}</text>
+      <text x="${w - 10}" y="${h - 6}" fill="${C.muted}" font-size="9" text-anchor="end">${escapeHtml(lastLabel)}</text>
+    </svg>`;
+  }
+
+  function scatterSVG(points, opts) {
+    const w = opts.width, h = opts.height, pad = 30;
+    if (points.length === 0) return `<div class="kpi-sub">실현된 거래가 부족합니다.</div>`;
+    const ys = points.map((p) => p.y);
+    const yMax = Math.max(1, ...ys.map(Math.abs));
+    const domain = [-yMax * 1.15, yMax * 1.15];
+    const zeroY = scale(0, domain, [h - 20, 10]);
+    const circles = points.map((p) => {
+      const cx = scale(p.x, [0, 1], [pad, w - 10]);
+      const cy = scale(p.y, domain, [h - 20, 10]);
+      const fill = p.y >= 0 ? C.pos : C.neg;
+      return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${fill}" fill-opacity="0.85"><title>${escapeHtml(p.ticker)} · conf ${p.x.toFixed(2)} · ${fmtPct(p.y)}</title></circle>`;
+    }).join("");
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+      <line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w - 10}" y2="${zeroY.toFixed(1)}" stroke="${C.border}" stroke-dasharray="3 3" />
+      <line x1="${pad}" y1="10" x2="${pad}" y2="${h - 10}" stroke="${C.border}" />
+      <text x="${pad}" y="${h - 2}" fill="${C.muted}" font-size="9">conf 0.0</text>
+      <text x="${w - 10}" y="${h - 2}" fill="${C.muted}" font-size="9" text-anchor="end">conf 1.0</text>
+      ${circles}
+    </svg>`;
+  }
+
+  function barChartSVG(data, opts) {
+    const w = opts.width, rowH = 26, pad = 150;
+    if (data.length === 0) return `<div class="kpi-sub">실현된 거래가 부족합니다.</div>`;
+    const h = data.length * (rowH + 8) + 10;
+    const maxCount = Math.max(1, ...data.map((d) => d.count));
+    const bars = data.map((d, i) => {
+      const y = i * (rowH + 8) + 6;
+      const barW = scale(d.count, [0, maxCount], [0, w - pad - 40]);
+      const color = d.isFail ? C.neg : C.pos;
+      return `
+        <text x="0" y="${y + rowH / 2 + 4}" fill="${C.muted}" font-size="10">${escapeHtml(d.cause)}</text>
+        <rect x="${pad}" y="${y}" width="${barW.toFixed(1)}" height="${rowH}" fill="${color}" fill-opacity="0.85" rx="3"><title>${escapeHtml(d.fullCause)} — ${d.count}건</title></rect>
+        <text x="${pad + barW + 6}" y="${y + rowH / 2 + 4}" fill="${C.text}" font-size="10">${d.count}</text>
+      `;
+    }).join("");
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">${bars}</svg>`;
+  }
+
+  // ---- Rendering ----------------------------------------------------------
+  function statusBadgeHtml(status) {
+    const map = {
+      WIN: ["badge-win", "WIN"], LOSS: ["badge-loss", "LOSS"], PENDING: ["badge-pending", "PENDING"],
+      ANOMALY: ["badge-anomaly", "ANOMALY"], HOLDING: ["badge-holding", "HOLDING"],
+      SOLD: ["badge-sold", "SOLD"], SOLD_END_OF_DAY: ["badge-closed", "CLOSED"],
+    };
+    const m = map[status] || ["badge-closed", status];
+    return `<span class="badge ${m[0]}">${m[1]}</span>`;
+  }
+
+  function render() {
+    const content = document.getElementById("content");
+    const hasData = STATE.history && STATE.history.length > 0;
+
+    if (!hasData) {
+      content.innerHTML = `
+        <div class="empty">
+          <div class="display" style="font-size:15px;color:var(--text);margin-bottom:6px;">데이터가 없습니다</div>
+          <div style="font-size:12px;max-width:360px;margin:0 auto;line-height:1.6;">
+            서버에 <code>history.json</code>이 아직 없거나, API 인증 토큰이 올바르지 않을 수 있습니다.
+          </div>
+        </div>`;
+      return;
+    }
+
+    const flat = flattenStocks(STATE.history);
+    const sortedDates = STATE.history.map((r) => r.date).sort();
+    const latestDate = sortedDates[sortedDates.length - 1];
+    const realized = flat.filter((s) => typeof s.actual_return === "number");
+    const wins = realized.filter((s) => s.actual_return > 0);
+    const winRate = realized.length ? (wins.length / realized.length) * 100 : null;
+    const avgReturn = realized.length ? realized.reduce((a, s) => a + s.actual_return, 0) / realized.length : null;
+    const best = realized.length ? realized.reduce((a, s) => (s.actual_return > a.actual_return ? s : a), realized[0]) : null;
+    const streak = computeStreak(STATE.history);
+    const budgetRatio = budgetRatioForStreak(streak);
+    const anomalies = flat.filter((s) => (s.actual_return === null || s.actual_return === undefined) && s.date !== latestDate);
+
+    // equity curve
+    const sortedRecs = STATE.history.slice().sort((a, b) => (a.date > b.date ? 1 : -1));
+    let cum = 0;
+    const equityPoints = [];
+    for (const rec of sortedRecs) {
+      const rets = (rec.stocks || []).map((s) => s.actual_return).filter((v) => typeof v === "number");
+      if (rets.length === 0) continue;
+      const avg = rets.reduce((a, b) => a + b, 0) / rets.length;
+      cum += avg;
+      equityPoints.push({ label: rec.date.slice(5), y: Number(cum.toFixed(2)) });
+    }
+
+    // signal strip
+    const signalTicks = sortedRecs.map((rec) => {
+      const rets = (rec.stocks || []).map((s) => s.actual_return).filter((v) => typeof v === "number");
+      if (rets.length === 0) return { date: rec.date, state: "pending", avg: null };
+      const avg = rets.reduce((a, b) => a + b, 0) / rets.length;
+      return { date: rec.date, state: avg >= 0 ? "win" : "loss", avg };
+    });
+
+    // scatter
+    const scatterPoints = realized.map((s) => ({ ticker: s.ticker, x: s.confidence ?? 0, y: s.actual_return }));
+
+    // cause breakdown
+    const causeCounts = {};
+    const failSet = new Set();
+    for (const s of realized) {
+      const cause = s.success_cause || s.fail_cause;
+      if (!cause) continue;
+      causeCounts[cause] = (causeCounts[cause] || 0) + 1;
+      if (s.fail_cause) failSet.add(cause);
+    }
+    const causeData = Object.entries(causeCounts).map(([cause, count]) => ({
+      cause: cause.length > 20 ? cause.slice(0, 20) + "…" : cause,
+      fullCause: cause, count, isFail: failSet.has(cause),
+    }));
+
+    // ledger
+    let ledger = flat.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    if (STATE.search.trim()) {
+      const q = STATE.search.trim().toUpperCase();
+      ledger = ledger.filter((r) => (r.ticker || "").toUpperCase().includes(q));
+    }
+
+    let html = "";
+
+    // signal strip panel
+    html += `<div class="panel"><div class="panel-head"><span class="panel-title">Daily Signal</span></div><div class="panel-body">
+      <div class="signal-strip">
+        ${signalTicks.map((d) => {
+          const color = d.state === "win" ? C.pos : d.state === "loss" ? C.neg : C.warnDim;
+          const hgt = d.avg === null ? 14 : Math.max(10, Math.min(40, 10 + Math.abs(d.avg) * 4));
+          const title = `${d.date} · ${d.avg === null ? "정산 대기" : fmtPct(d.avg)}`;
+          return `<div class="tick" title="${escapeHtml(title)}" style="height:${hgt}px;background:${color};"></div>`;
+        }).join("")}
+      </div>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:${C.pos}"></span>WIN DAY</span>
+        <span><span class="legend-dot" style="background:${C.neg}"></span>LOSS DAY</span>
+        <span><span class="legend-dot" style="background:${C.warnDim}"></span>PENDING</span>
+      </div>
+    </div></div>`;
+
+    // KPIs
+    html += `<div class="kpis">
+      <div class="kpi"><div class="kpi-label">Recommendations</div><div class="kpi-value">${flat.length}</div><div class="kpi-sub">${STATE.history.length} trading days</div></div>
+      <div class="kpi"><div class="kpi-label">Realized Trades</div><div class="kpi-value">${realized.length}</div><div class="kpi-sub">${flat.length - realized.length} pending/unresolved</div></div>
+      <div class="kpi"><div class="kpi-label">Win Rate</div><div class="kpi-value ${winRate === null ? "" : winRate >= 50 ? "pos" : "neg"}">${winRate === null ? "—" : winRate.toFixed(0) + "%"}</div><div class="kpi-sub">${wins.length}W / ${realized.length - wins.length}L</div></div>
+      <div class="kpi"><div class="kpi-label">Avg Return</div><div class="kpi-value ${avgReturn === null ? "" : avgReturn >= 0 ? "pos" : "neg"}">${avgReturn === null ? "—" : fmtPct(avgReturn)}</div><div class="kpi-sub">${best ? "best " + escapeHtml(best.ticker) + " " + fmtPct(best.actual_return) : ""}</div></div>
+      <div class="kpi"><div class="kpi-label">Losing Streak</div><div class="kpi-value ${streak >= 3 ? "neg" : streak > 0 ? "warn" : "pos"}">${streak}</div><div class="kpi-sub">${streak > 0 ? "예산 " + (budgetRatio * 100).toFixed(0) + "%로 축소 권고" : "정상 배분"}</div></div>
+    </div>`;
+
+    // anomaly watch
+    if (anomalies.length > 0) {
+      html += `<div class="panel danger"><div class="panel-head"><span class="panel-title">⚠ Anomaly Watch · ${anomalies.length}건</span></div><div class="panel-body">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">추천 이후 최소 하루가 지났는데도 실현손익이 기록되지 않은 종목입니다. 매도 실패, 정산 누락, 또는 봇 재시작으로 추적이 끊겼을 가능성이 있습니다.</div>
+        <div>${anomalies.map((a) => `<span class="anomaly-chip"><span class="neg" style="font-weight:600;">${escapeHtml(a.ticker)}</span><span style="color:var(--muted);">${escapeHtml(a.date)}</span></span>`).join("")}</div>
+      </div></div>`;
+    }
+
+    // equity + scatter
+    html += `<div class="grid-main">
+      <div class="panel"><div class="panel-head"><span class="panel-title">Cumulative Return (단순 합산)</span></div><div class="panel-body">${lineChartSVG(equityPoints, { width: 560, height: 220 })}</div></div>
+      <div class="panel"><div class="panel-head"><span class="panel-title">Confidence Calibration</span></div><div class="panel-body">${scatterSVG(scatterPoints, { width: 380, height: 220 })}</div></div>
+    </div>`;
+
+    // cause + active positions
+    html += `<div class="grid2">
+      <div class="panel"><div class="panel-head"><span class="panel-title">Cause Breakdown</span></div><div class="panel-body">${barChartSVG(causeData, { width: 440 })}</div></div>
+      <div class="panel"><div class="panel-head"><span class="panel-title">Active Positions${STATE.activeTrades ? " · " + STATE.activeTrades.length : ""}</span></div><div class="panel-body">
+        ${!STATE.activeTrades || STATE.activeTrades.length === 0 ? `<div class="kpi-sub">active_trades.json이 없습니다.</div>` :
+          STATE.activeTrades.map((t) => {
+            const risk = t.entry_price ? ((t.entry_price - t.stop_loss_price) / t.entry_price) * 100 : null;
+            const reward = t.entry_price ? ((t.target_price - t.entry_price) / t.entry_price) * 100 : null;
+            return `<div class="position-row">
+              <div style="display:flex;align-items:center;gap:8px;min-width:90px;"><span style="font-weight:600;">${escapeHtml(t.ticker)}</span>${statusBadgeHtml(t.status)}</div>
+              <div style="color:var(--muted);">entry <span style="color:var(--text);">$${(t.entry_price || 0).toFixed(2)}</span></div>
+              <div class="pos">tgt $${(t.target_price || 0).toFixed(2)} (${reward !== null ? fmtPct(reward, 1) : "—"})</div>
+              <div class="neg">stop $${(t.stop_loss_price || 0).toFixed(2)} (${risk !== null ? fmtPct(-risk, 1) : "—"})</div>
+              <div style="color:var(--muted-dim);">${escapeHtml(t.recommended_date || "")}</div>
+            </div>`;
+          }).join("")}
+      </div></div>
+    </div>`;
+
+    // ledger
+    html += `<div class="panel"><div class="panel-head"><span class="panel-title">Recommendation Ledger${STATE.search ? " · filtered \"" + escapeHtml(STATE.search) + "\"" : ""}</span></div><div class="panel-body">
+      <div style="overflow-x:auto;"><table><thead><tr>
+        <th>DATE</th><th>TICKER</th><th>CONF</th><th>RETURN</th><th>STATUS</th><th>REASON</th>
+      </tr></thead><tbody>
+      ${ledger.length === 0 ? `<tr><td colspan="6" style="padding:20px 8px;text-align:center;color:var(--muted-dim);">검색 결과가 없습니다.</td></tr>` :
+        ledger.map((row, i) => {
+          const isAnomaly = (row.actual_return === null || row.actual_return === undefined) && row.date !== latestDate;
+          const status = isAnomaly ? "ANOMALY" : (typeof row.actual_return !== "number" ? "PENDING" : (row.actual_return >= 0 ? "WIN" : "LOSS"));
+          const key = row.date + "-" + row.ticker + "-" + i;
+          const isOpen = !!STATE.expanded[key];
+          const returnColor = typeof row.actual_return === "number" ? (row.actual_return >= 0 ? "pos" : "neg") : "";
+          return `<tr data-key="${key}">
+            <td class="mono" style="color:var(--muted-dim);white-space:nowrap;">${escapeHtml(row.date)}</td>
+            <td class="mono" style="font-weight:600;">${escapeHtml(row.ticker)}</td>
+            <td class="mono" style="color:var(--muted);">${typeof row.confidence === "number" ? row.confidence.toFixed(2) : "—"}</td>
+            <td class="mono ${returnColor}">${fmtPct(row.actual_return)}</td>
+            <td>${statusBadgeHtml(status)}</td>
+            <td class="reason-cell"><span class="reason-text ${isOpen ? "open" : ""}">${escapeHtml(row.reason || "")}</span></td>
+          </tr>`;
+        }).join("")}
+      </tbody></table></div>
+    </div></div>`;
+
+    content.innerHTML = html;
+
+    content.querySelectorAll("tbody tr[data-key]").forEach((tr) => {
+      tr.addEventListener("click", () => {
+        const key = tr.getAttribute("data-key");
+        STATE.expanded[key] = !STATE.expanded[key];
+        render();
+      });
+    });
+  }
+
+  function showBanner(type, text) {
+    document.getElementById("banners").innerHTML = `<div class="banner ${type}">${escapeHtml(text)}</div>`;
+  }
+
+  function clearBanner() {
+    document.getElementById("banners").innerHTML = "";
+  }
+
+  async function loadData() {
+    if (!TOKEN) {
+      document.getElementById("statusLine").textContent = "Position Intelligence · 토큰 없음";
+      showBanner("error", "URL에 ?token=YOUR_TOKEN 파라미터를 추가해야 데이터를 불러올 수 있습니다.");
+      return;
+    }
+    try {
+      const [hRes, aRes] = await Promise.all([
+        fetch("/api/history?token=" + encodeURIComponent(TOKEN)),
+        fetch("/api/active-trades?token=" + encodeURIComponent(TOKEN)),
+      ]);
+      if (hRes.status === 401 || aRes.status === 401) {
+        document.getElementById("statusLine").textContent = "Position Intelligence · 인증 실패";
+        showBanner("error", "토큰이 올바르지 않습니다. 서버의 DASHBOARD_TOKEN 환경변수와 URL의 token 값을 확인하세요.");
+        return;
+      }
+      STATE.history = await hRes.json();
+      STATE.activeTrades = await aRes.json();
+      STATE.loaded = true;
+      clearBanner();
+      const now = new Date().toLocaleTimeString("ko-KR");
+      document.getElementById("statusLine").textContent = `Position Intelligence · ${STATE.history.length} RECORDS · 마지막 갱신 ${now}`;
+      render();
+    } catch (e) {
+      document.getElementById("statusLine").textContent = "Position Intelligence · 연결 오류";
+      showBanner("error", "서버에 연결할 수 없습니다: " + e.message);
+    }
+  }
+
+  async function loadSettings() {
+    if (!TOKEN) return;
+    try {
+      const res = await fetch("/api/settings?token=" + encodeURIComponent(TOKEN));
+      if (res.status === 401) return;
+      const s = await res.json();
+      STATE.settings = s;
+      document.getElementById("setPaused").checked = !!s.paused;
+      document.getElementById("setMaxPositions").value = String(s.max_positions || 3);
+      document.getElementById("setMaxBudget").value = s.max_budget_pct ?? 35;
+      document.getElementById("setMinConfidence").value = s.min_confidence ?? 0.65;
+      document.getElementById("setMaxAtr").value = s.max_atr_pct ?? 5.0;
+      document.getElementById("setDailyLossCut").value = s.max_daily_loss_pct ?? 3.0;
+      document.getElementById("setRiskMode").value = s.risk_mode || "balanced";
+      document.getElementById("setExcluded").value = (s.excluded_tickers || []).join(", ");
+      if (STATE.loaded) render();
+    } catch (e) {
+      // 조용히 무시 - 다음 새로고침에서 다시 시도
+    }
+  }
+
+  async function saveSettings() {
+    const statusEl = document.getElementById("settingsStatus");
+    if (!TOKEN) {
+      showBanner("error", "토큰이 없어 설정을 저장할 수 없습니다.");
+      return;
+    }
+    const payload = {
+      paused: document.getElementById("setPaused").checked,
+      max_positions: parseInt(document.getElementById("setMaxPositions").value, 10),
+      max_budget_pct: parseFloat(document.getElementById("setMaxBudget").value),
+      min_confidence: parseFloat(document.getElementById("setMinConfidence").value),
+      max_atr_pct: parseFloat(document.getElementById("setMaxAtr").value),
+      max_daily_loss_pct: parseFloat(document.getElementById("setDailyLossCut").value),
+      risk_mode: document.getElementById("setRiskMode").value,
+      excluded_tickers: document.getElementById("setExcluded").value
+        .split(",").map((s) => s.trim()).filter(Boolean),
+    };
+    statusEl.textContent = "저장 중...";
+    try {
+      const res = await fetch("/api/settings?token=" + encodeURIComponent(TOKEN), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.status === 401) { statusEl.textContent = "인증 실패"; return; }
+      const saved = await res.json();
+      STATE.settings = saved;
+      document.getElementById("setExcluded").value = (saved.excluded_tickers || []).join(", ");
+      statusEl.textContent = "저장됨 · 다음 사이클부터 반영";
+      setTimeout(() => { statusEl.textContent = ""; }, 3000);
+    } catch (e) {
+      statusEl.textContent = "저장 실패: " + e.message;
+    }
+  }
+
+  document.getElementById("saveSettingsBtn").addEventListener("click", saveSettings);
+  document.getElementById("refreshBtn").addEventListener("click", loadData);
+  document.getElementById("searchInput").addEventListener("input", (e) => {
+    STATE.search = e.target.value;
+    render();
+  });
+
+  loadData();
+  loadSettings();
+  setInterval(loadData, REFRESH_MS);
+})();
+</script>
+</body>
+</html>
