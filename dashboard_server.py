@@ -5,15 +5,11 @@ import hmac
 import logging
 from pathlib import Path
 from aiohttp import web
-from dotenv import load_dotenv
 from settings_manager import SettingsManager
-
-load_dotenv()
 
 logger = logging.getLogger("StockReporter")
 
-def _get_server_token() -> str:
-    return os.getenv("DASHBOARD_TOKEN", "").strip()
+DASHBOARD_TOKEN = os.getenv("DASHBOARD_TOKEN", "")
 DASHBOARD_HTML_PATH = Path(__file__).parent / "dashboard.html"
 HISTORY_FILE = "history.json"
 ACTIVE_TRADES_FILE = "active_trades.json"
@@ -24,14 +20,13 @@ settings_manager = SettingsManager()
 def _check_token(request: web.Request) -> bool:
     """
     URL 쿼리스트링의 token 파라미터와 서버에 설정된 DASHBOARD_TOKEN을 비교합니다.
-    hmac.compare_digest를 사용해 타이밍 공격을 방지합니다.
+    hmac.compare_digest를 사용해 타이밍 공격을 방지합니다. DASHBOARD_TOKEN
+    자체가 비어있으면(설정 안 함) 무조건 거부합니다.
     """
-    server_token = _get_server_token()
-    if not server_token:
-        # If DASHBOARD_TOKEN is not set in env, allow access or check
+    if not DASHBOARD_TOKEN:
         return False
-    token = request.query.get("token", "").strip()
-    return hmac.compare_digest(token, server_token)
+    token = request.query.get("token", "")
+    return hmac.compare_digest(token, DASHBOARD_TOKEN)
 
 
 def _read_json_file(path: str):
