@@ -1,19 +1,18 @@
 import pytest
 from breakout_strategy import BreakoutStrategyRunner
-from exit_manager import ExitManager
 
 
 class DummyTossService:
     def __init__(self):
         self.balance = 500.0
-        self.prices = {"AAPL": 150.0, "TSLA": 200.0}
+        self.prices = {"UPXI": 5.0, "AAPL": 150.0}
         self.orders = []
 
     async def get_balance(self):
         return self.balance
 
     async def get_realtime_price(self, ticker):
-        return self.prices.get(ticker, 100.0)
+        return self.prices.get(ticker, 5.0)
 
     async def buy_market_order(self, ticker, budget):
         self.orders.append(("BUY", ticker, budget))
@@ -33,64 +32,53 @@ class DummyTelegramService:
 
 
 @pytest.mark.asyncio
-async def test_breakout_strategy_enter_and_trailing_exit():
+async def test_snowball_runner_entry_and_trailing():
     toss = DummyTossService()
     tg = DummyTelegramService()
-    runner = BreakoutStrategyRunner(toss, tg, score_threshold=450.0)
+    runner = BreakoutStrategyRunner(toss, tg, score_threshold=15.0, max_positions=1)
 
-    # High score test candidate
-    high_score_candidate = {
-        'ticker': 'AAPL',
-        'rvol_prev': 0.99,
-        'gap_open_pct': -1.55,
-        'condensation_prev': 0.169,
-        'bb_width': 48.07,
-        'atr_pct': 4.75,
-        'm5_dominance': 93.83,
-        'date_numerology': 9.0,
-        'ticker_gematria': 9.0,
-        'resonance_score': 1.0,
-        'moon_phase': 0.95,
-        'is_full_moon': 0.0,
-        'is_new_moon': 1.0,
-        'moon_fullness': 0.091,
-        'is_mercury_retrograde': 0.0,
-        'zodiac_sign': 10.0,
-        'celestial_harmony': 0.727,
-        'fact_score': 0.0,
-        'rvol_x_condensation': 0.822,
-        'fact_x_resonance': 0.0,
-        'fact_x_moon': 0.0,
-        'celestial_x_rvol': 0.72,
-        'm5_dom_per_gap': 36.65,
-        'bb_squeeze_rvol': 0.02,
-        'is_toxic_material': 0.0,
+    candidate = {
+        "ticker": "UPXI",
+        "fact_score": 0.8,
+        "atr_pct": 12.0,
+        "rvol_prev": 2.5,
+        "gap_open_pct": 2.0,
+        "bb_width": 45.0,
+        "is_toxic_material": 0.0,
     }
 
-    entered = await runner.screen_and_enter([high_score_candidate])
-    assert "AAPL" in entered
-    assert "AAPL" in runner.active_positions
+    entered = await runner.screen_and_enter([candidate])
+    assert "UPXI" in entered
+    assert "UPXI" in runner.active_positions
     assert len(toss.orders) == 1
     assert toss.orders[0][0] == "BUY"
 
-    pos = runner.active_positions["AAPL"]
-    assert pos.entry_price == 150.0
+    pos = runner.active_positions["UPXI"]
+    assert pos.entry_price == 5.0
 
-    # 2. Simulate price surging to +10% (165.0)
-    toss.prices["AAPL"] = 165.0
+    # 1. Price drops to -3.1% -> STOP LOSS
+    toss.prices["UPXI"] = 4.84
     action, ratio, reason = pos.exit_manager.evaluate_exit(
-        entry_price=150.0,
-        current_price=165.0,
-        highest_price_since_entry=165.0,
+        entry_price=5.0,
+        current_price=4.84,
+        highest_price_since_entry=5.0,
+    )
+    assert action == "SELL"
+    assert "STOP_LOSS" in reason
+
+    # 2. Price surges to +30% ($6.50)
+    action, ratio, reason = pos.exit_manager.evaluate_exit(
+        entry_price=5.0,
+        current_price=6.50,
+        highest_price_since_entry=6.50,
     )
     assert action == "HOLD"
 
-    # 3. Simulate price pulling back -2.0% from peak (165.0 * 0.98 = 161.7)
-    # Trailing threshold is -1.5%, so this should trigger SELL
+    # 3. Pulls back -2.1% from peak ($6.36) -> Trailing Stop triggered
     action, ratio, reason = pos.exit_manager.evaluate_exit(
-        entry_price=150.0,
-        current_price=161.7,
-        highest_price_since_entry=165.0,
+        entry_price=5.0,
+        current_price=6.36,
+        highest_price_since_entry=6.50,
     )
     assert action == "SELL"
     assert "TRAILING_STOP" in reason
