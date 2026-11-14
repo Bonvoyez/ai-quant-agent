@@ -10,11 +10,11 @@ logger = logging.getLogger("StockReporter")
 
 DEFAULT_SETTINGS: Dict[str, Any] = {
     "paused": False,
-    "max_positions": 3,
-    "strategy_mode": "rotation",  # rotation | breakout
-    "max_budget_pct": 35,
+    "max_positions": 1,
+    "strategy_mode": "breakout",  # rotation | breakout
+    "max_budget_pct": 100,
     "min_confidence": 0.65,
-    "max_atr_pct": 5.0,
+    "max_atr_pct": 20.0,
     "max_daily_loss_pct": 3.0,
     "excluded_tickers": [],
     "risk_mode": "balanced",  # conservative | balanced | aggressive
@@ -57,7 +57,7 @@ class SettingsManager:
         for key, default, low, high in (
             ("max_budget_pct", 100, 5, 100),
             ("min_confidence", 0.65, 0.50, 0.95),
-            ("max_atr_pct", 5.0, 1.0, 12.0),
+            ("max_atr_pct", 20.0, 1.0, 30.0),
             ("max_daily_loss_pct", 3.0, 0.5, 10.0),
         ):
             try:
