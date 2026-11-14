@@ -23,6 +23,7 @@ from quant_rules import (
     select_swing_trend_candidate,
 )
 from rotation_strategy import run_daily_cycle as run_rotation_daily_cycle
+from breakout_strategy import BreakoutStrategyRunner
 from utils import atomic_write
 
 logger = logging.getLogger("StockReporter")
@@ -559,14 +560,27 @@ class DailyScheduler:
                 )
 
                 if should_trigger:
-                    # 로테이션은 레거시 AI/일일손실 필터와 분리한다. 과거 손실이
-                    # 영구적으로 신규 주문을 막는 문제를 피하고, 자체 DD 브레이크를 쓴다.
-                    if os.getenv("STRATEGY_MODE", "legacy").lower() == "rotation":
+                    strategy_mode = os.getenv("STRATEGY_MODE", "rotation").lower()
+                    if strategy_mode == "rotation":
                         try:
                             await run_rotation_daily_cycle(self.toss, self.telegram)
                         except Exception as rotation_error:
                             logger.exception("로테이션 사이클 실패")
                             await self.telegram.send_message(f"[로테이션 오류] {rotation_error}")
+                        last_run_date = today_str
+                        continue
+                    elif strategy_mode == "breakout":
+                        try:
+                            logger.info("🚀 [Breakout Strategy] 장전/시초 스크리닝 및 자동 주문 실행")
+                            runner = BreakoutStrategyRunner(self.toss, self.telegram)
+                            # candidate features will be gathered via pre-market data
+                            candidates = await self.market.get_breakout_candidates_premarket() if hasattr(self.market, "get_breakout_candidates_premarket") else []
+                            if candidates:
+                                await runner.screen_and_enter(candidates)
+                                asyncio.create_task(runner.run_intraday_exit_loop())
+                        except Exception as breakout_error:
+                            logger.exception("브레이크아웃 사이클 실패")
+                            await self.telegram.send_message(f"[브레이크아웃 오류] {breakout_error}")
                         last_run_date = today_str
                         continue
                     # 주문 판단 전에 실계좌를 한 번 기준점으로 삼는다. 수동 매도 뒤에
