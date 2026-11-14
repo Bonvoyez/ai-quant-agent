@@ -55,7 +55,7 @@ class SettingsManager:
             s["max_positions"] = 3
 
         for key, default, low, high in (
-            ("max_budget_pct", 35, 5, 75),
+            ("max_budget_pct", 100, 5, 100),
             ("min_confidence", 0.65, 0.50, 0.95),
             ("max_atr_pct", 5.0, 1.0, 12.0),
             ("max_daily_loss_pct", 3.0, 0.5, 10.0),
