@@ -11,8 +11,7 @@ logger = logging.getLogger("StockReporter")
 DEFAULT_SETTINGS: Dict[str, Any] = {
     "paused": False,
     "max_positions": 3,
-    # ``max_positions`` is a ceiling, not a promise to buy this many names.
-    # In a weak market holding cash is a valid outcome.
+    "strategy_mode": "rotation",  # rotation | breakout
     "max_budget_pct": 35,
     "min_confidence": 0.65,
     "max_atr_pct": 5.0,
@@ -22,6 +21,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
 }
 
 VALID_RISK_MODES = {"conservative", "balanced", "aggressive"}
+VALID_STRATEGY_MODES = {"rotation", "breakout"}
 
 
 class SettingsManager:
@@ -64,6 +64,9 @@ class SettingsManager:
                 s[key] = max(low, min(high, float(s.get(key, default))))
             except (TypeError, ValueError):
                 s[key] = default
+
+        if s.get("strategy_mode") not in VALID_STRATEGY_MODES:
+            s["strategy_mode"] = "rotation"
 
         if s.get("risk_mode") not in VALID_RISK_MODES:
             s["risk_mode"] = "balanced"

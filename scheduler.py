@@ -560,7 +560,8 @@ class DailyScheduler:
                 )
 
                 if should_trigger:
-                    strategy_mode = os.getenv("STRATEGY_MODE", "rotation").lower()
+                    user_settings = self.settings.load()
+                    strategy_mode = str(user_settings.get("strategy_mode") or os.getenv("STRATEGY_MODE", "rotation")).lower()
                     if strategy_mode == "rotation":
                         try:
                             await run_rotation_daily_cycle(self.toss, self.telegram)

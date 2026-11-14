@@ -169,6 +169,13 @@
           <input type="number" id="setDailyLossCut" class="search" min="0.5" max="10" step="0.5" style="width:76px;" />
         </div>
         <div>
+          <div class="kpi-label">STRATEGY</div>
+          <select id="setStrategyMode" class="search" style="width:140px;font-weight:600;color:var(--accent);">
+            <option value="rotation">ETF Rotation</option>
+            <option value="breakout">🚀 Breakout Sniper</option>
+          </select>
+        </div>
+        <div>
           <div class="kpi-label">RISK MODE</div>
           <select id="setRiskMode" class="search" style="width:150px;">
             <option value="conservative">Conservative</option>
@@ -450,12 +457,38 @@
           STATE.activeTrades.map((t) => {
             const risk = t.entry_price ? ((t.entry_price - t.stop_loss_price) / t.entry_price) * 100 : null;
             const reward = t.entry_price ? ((t.target_price - t.entry_price) / t.entry_price) * 100 : null;
-            return `<div class="position-row">
-              <div style="display:flex;align-items:center;gap:8px;min-width:90px;"><span style="font-weight:600;">${escapeHtml(t.ticker)}</span>${statusBadgeHtml(t.status)}</div>
-              <div style="color:var(--muted);">entry <span style="color:var(--text);">$${(t.entry_price || 0).toFixed(2)}</span></div>
-              <div class="pos">tgt $${(t.target_price || 0).toFixed(2)} (${reward !== null ? fmtPct(reward, 1) : "—"})</div>
-              <div class="neg">stop $${(t.stop_loss_price || 0).toFixed(2)} (${risk !== null ? fmtPct(-risk, 1) : "—"})</div>
-              <div style="color:var(--muted-dim);">${escapeHtml(t.recommended_date || "")}</div>
+            const curP = t.current_price || t.entry_price || 0;
+            const curRet = t.entry_price ? ((curP - t.entry_price) / t.entry_price) * 100 : 0;
+            const highP = t.highest_price || curP;
+            const peakRet = t.entry_price ? ((highP - t.entry_price) / t.entry_price) * 100 : 0;
+            const pullback = highP > 0 ? ((highP - curP) / highP) * 100 : 0;
+            const isBreakout = t.strategy === "breakout" || !!t.highest_price;
+
+            return `<div class="position-row" style="display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px solid var(--border-soft);">
+              <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-weight:700;font-size:14px;">${escapeHtml(t.ticker)}</span>
+                  ${statusBadgeHtml(t.status)}
+                  <span class="mono" style="font-size:11px;color:var(--muted);">$${(curP).toFixed(2)}</span>
+                </div>
+                <div class="mono" style="font-weight:700;font-size:13px;color:${curRet >= 0 ? 'var(--pos)' : 'var(--neg)'};">
+                  ${curRet >= 0 ? '+' : ''}${curRet.toFixed(2)}%
+                </div>
+              </div>
+              ${isBreakout ? `
+              <div style="background:var(--panel-alt);border-radius:4px;padding:6px 8px;font-size:10px;" class="mono">
+                <div style="display:flex;justify-content:space-between;color:var(--muted);margin-bottom:3px;">
+                  <span>PEAK: <strong style="color:var(--pos);">+${peakRet.toFixed(2)}%</strong> ($${highP.toFixed(2)})</span>
+                  <span>PULLBACK: <strong style="color:${pullback >= 1.0 ? 'var(--warn)' : 'var(--text)'};">-${pullback.toFixed(2)}%</strong> / 1.5%</span>
+                </div>
+                <div style="width:100%;height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+                  <div style="height:100%;width:${Math.min(100, (pullback / 1.5) * 100)}%;background:${pullback >= 1.2 ? 'var(--neg)' : 'var(--accent)'};"></div>
+                </div>
+              </div>` : `
+              <div style="display:flex;gap:12px;font-size:11px;">
+                <div class="pos">tgt $${(t.target_price || 0).toFixed(2)} (${reward !== null ? fmtPct(reward, 1) : "—"})</div>
+                <div class="neg">stop $${(t.stop_loss_price || 0).toFixed(2)} (${risk !== null ? fmtPct(-risk, 1) : "—"})</div>
+              </div>`}
             </div>`;
           }).join("")}
       </div></div>
@@ -546,6 +579,7 @@
       document.getElementById("setMinConfidence").value = s.min_confidence ?? 0.65;
       document.getElementById("setMaxAtr").value = s.max_atr_pct ?? 5.0;
       document.getElementById("setDailyLossCut").value = s.max_daily_loss_pct ?? 3.0;
+      document.getElementById("setStrategyMode").value = s.strategy_mode || "rotation";
       document.getElementById("setRiskMode").value = s.risk_mode || "balanced";
       document.getElementById("setExcluded").value = (s.excluded_tickers || []).join(", ");
       if (STATE.loaded) render();
@@ -567,6 +601,7 @@
       min_confidence: parseFloat(document.getElementById("setMinConfidence").value),
       max_atr_pct: parseFloat(document.getElementById("setMaxAtr").value),
       max_daily_loss_pct: parseFloat(document.getElementById("setDailyLossCut").value),
+      strategy_mode: document.getElementById("setStrategyMode").value,
       risk_mode: document.getElementById("setRiskMode").value,
       excluded_tickers: document.getElementById("setExcluded").value
         .split(",").map((s) => s.trim()).filter(Boolean),
