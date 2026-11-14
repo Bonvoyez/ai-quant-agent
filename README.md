@@ -6,7 +6,7 @@
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Testing: Pytest](https://img.shields.io/badge/pytest-passing-brightgreen.svg)](https://pytest.org)
 
-An asynchronous quantitative trading and execution bot for US equities and crypto. Built with Python (`asyncio`, `aiohttp`), deterministic risk rules, momentum filters, and live broker integration (Toss Securities OpenAPI and Upbit).
+An asynchronous quantitative trading and execution bot for US equities. Built with Python (`asyncio`, `aiohttp`), deterministic risk rules, momentum filters, and live broker integration (Toss Securities OpenAPI).
 
 ---
 
@@ -14,9 +14,8 @@ An asynchronous quantitative trading and execution bot for US equities and crypt
 
 - **Breakout Screening & Trailing Stops**: Closed-form mathematical scoring for small-cap breakouts combined with intraday trailing stop-loss management (`breakout_strategy.py`, `exit_manager.py`).
 - **Deterministic Risk Rules**: ATR-based dynamic bounds, hard capital caps per ticker, and daily drawdown circuit breakers (`quant_rules.py`).
-- **Multi-Broker Connectivity**:
+- **Broker Connectivity**:
   - **Toss Securities OpenAPI**: US equities market execution with automated OAuth2 token refresh and fractional/integer share fallback.
-  - **Upbit REST/WebSocket**: Spot crypto trade support.
 - **Async Architecture**: Non-blocking network I/O, background schedule reconciler, and token-authenticated local web dashboard.
 - **Telegram Notifications**: Real-time alerts for orders, position updates, and trailing stops.
 
