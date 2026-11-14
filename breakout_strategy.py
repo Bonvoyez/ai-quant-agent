@@ -9,6 +9,7 @@ Coordinates:
 
 import asyncio
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -74,15 +75,23 @@ class BreakoutStrategyRunner:
                 logger.warning(f"⚠️ Insufficient balance (${balance:.2f}) to enter {ticker}")
                 continue
 
-            # Allocate up to available balance divided by remaining position slots
+            # Allocate up to available balance or capital cap
+            dry_run = os.getenv("ROTATION_DRY_RUN", "1") != "0"
+            cap_env = float(os.getenv("ROTATION_CAPITAL_CAP_USD", "0") or 0)
+            effective_balance = min(balance, cap_env) if cap_env > 0 else balance
+
             available_slots = max(1, self.max_positions - len(self.active_positions))
-            budget = balance / available_slots
+            budget = effective_balance / available_slots
             current_price = await self.toss.get_realtime_price(ticker)
             if not current_price or current_price <= 0:
                 logger.warning(f"⚠️ Could not fetch price for {ticker}")
                 continue
 
-            buy_success = await self.toss.buy_market_order(ticker, budget)
+            if dry_run:
+                logger.info(f"🧪 [DRY RUN] 가상 매수 집행: BUY {ticker} (${budget:.2f} @ ${current_price:.2f})")
+                buy_success = True
+            else:
+                buy_success = await self.toss.buy_market_order(ticker, budget)
             if buy_success:
                 pos = ActivePosition(
                     ticker=ticker,
@@ -137,7 +146,12 @@ class BreakoutStrategyRunner:
                     if action == "SELL":
                         curr_ret = ((current_price - pos.entry_price) / pos.entry_price) * 100.0
                         logger.info(f"🚨 [Exit Triggered] {ticker} - Reason: {reason} | Return: {curr_ret:.2f}%")
-                        sell_success = await self.toss.sell_market_order(ticker)
+                        dry_run = os.getenv("ROTATION_DRY_RUN", "1") != "0"
+                        if dry_run:
+                            logger.info(f"🧪 [DRY RUN] 가상 매도 집행: SELL {ticker} ({curr_ret:+.2f}%)")
+                            sell_success = True
+                        else:
+                            sell_success = await self.toss.sell_market_order(ticker)
                         if sell_success:
                             del self.active_positions[ticker]
                             msg = (

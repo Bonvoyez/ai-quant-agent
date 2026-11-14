@@ -32,7 +32,8 @@ class DummyTelegramService:
 
 
 @pytest.mark.asyncio
-async def test_snowball_runner_entry_and_trailing():
+async def test_snowball_runner_entry_and_trailing(monkeypatch):
+    monkeypatch.setenv("ROTATION_DRY_RUN", "0")
     toss = DummyTossService()
     tg = DummyTelegramService()
     runner = BreakoutStrategyRunner(toss, tg, score_threshold=15.0, max_positions=1)
