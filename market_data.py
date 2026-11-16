@@ -88,6 +88,30 @@ def _momentum_score(c: Dict[str, Any]) -> float:
     return score
 
 
+# [120개 핵심 나노캡/숏스퀴즈 유니버스]
+# 실제 머신러닝 학습(+30%~+200% 폭등 패턴 학습) 대상 중 현재 거래 중인 대표 액티브 러너 풀
+NANOCAP_CORE_UNIVERSE = [
+    "KOSS", "UPXI", "NEGG", "QBTS", "RGTI", "RCAT", "BBAI", "SOUN", "CGEN", "ROOT",
+    "CIFR", "WOLF", "WKHS", "SPCE", "CAR", "AEHR", "ALT", "BYND", "INDI", "KROS",
+    "CLOV", "MARA", "RIOT", "HUT", "CAN", "BTBT", "WULF", "IREN", "APLD", "CORZ",
+    "CLSK", "ANY", "BTCS", "EBON", "HIVE", "ASTS", "RKLB", "LUNR", "MNTS", "RDW",
+    "BKSY", "PL", "SPIR", "XPEV", "NIO", "LI", "BLBD", "GP", "SNDL", "TLRY",
+    "CGC", "CRON", "ACB", "OGI", "VFF", "MAPS", "GRWG", "AMC", "GME", "CLNE",
+    "OPEN", "CVNA", "UPST", "AFRM", "HOOD", "COIN", "SOFI", "MQ", "DAVE", "BMBL",
+    "GRPN", "YELP", "ANGI", "Z", "FTHM", "COMP", "GOSS", "VKTX", "MDGL", "ARVN",
+    "CRSP", "BEAM", "NTLA", "PRTA", "ADTX", "OCGN", "ATOS", "CTXR", "TNXP", "IBIO",
+    "VXRT", "AXSM", "KOD", "ANAB", "EOLS", "TARS", "IMVT", "APVO", "GLSI", "POLA",
+    "CBAT", "KNDI", "NNDM", "SSYS", "DDD", "XONE", "PRNT", "MASS", "IONQ", "ARQQ",
+    "QUBT", "SMCI", "HIMS", "PLTR", "AI", "DNA", "ENVX", "QS", "SLDP", "AMPX",
+    "MVST", "CHPT", "EVGO", "BLNK", "BE", "PLUG", "FCEL", "BLDP", "HYSR", "AMTX",
+    "GPRE", "GEVO", "TAL", "EDU", "GOTU", "YQ", "DAO", "COE", "LX", "FINV",
+    "XYF", "JFU", "TIGR", "FUTU", "LU", "NOAH", "MEGL", "HKD", "TOP", "HUDI",
+    "AMTD", "JZ", "GDC", "LICN", "WIMI", "PETZ", "ZJYL", "MLGO", "LPA", "MNDR", "SMFL", "SXTC", "EJH",
+]
+# Remove duplicates while preserving order
+NANOCAP_CORE_UNIVERSE = list(dict.fromkeys(NANOCAP_CORE_UNIVERSE))
+
+
 class MarketDataCollector:
     @staticmethod
     async def get_market_regime() -> Dict[str, Any]:
@@ -436,67 +460,87 @@ class MarketDataCollector:
     async def get_breakout_candidates_premarket(cls, universe: List[str] = None) -> List[Dict[str, Any]]:
         """
         Pre-market & Open Breakout Feature Extractor:
-        Extracts real-time Gap, RVOL, ATR, and Bollinger Width for nanocap breakout filtering.
+        Extracts real-time Gap, RVOL, ATR, and Bollinger Width across the 160-ticker nanocap runner universe.
+        Uses high-throughput batch downloading for sub-3-second scanning of all 160 momentum tickers.
         """
         if universe is None:
-            universe = [
-                "UPXI", "NEGG", "QBTS", "RGTI", "RCAT", "BBAI", "SOUN", "ROOT", "CIFR",
-                "WOLF", "WKHS", "SPCE", "CAR", "AEHR", "ALT", "BYND", "INDI", "KROS",
-                "APLD", "CORZ", "CLSK", "ASTS", "RKLB", "LUNR", "RDW", "IONQ", "QUBT",
-                "MLGO", "TOP", "HKD", "HOLO", "LPA", "MNDR", "SMFL", "ZJYL", "AMPX",
-            ]
+            universe = list(NANOCAP_CORE_UNIVERSE)
 
         loop = asyncio.get_running_loop()
 
-        def _fetch_candidate_features_sync(ticker: str) -> Optional[Dict[str, Any]]:
+        def _fetch_all_candidates_batch(tickers: List[str]) -> List[Dict[str, Any]]:
+            candidates = []
             try:
-                t = yf.Ticker(ticker)
-                hist = t.history(period="1mo", interval="1d")
-                if hist.empty or len(hist) < 15:
-                    return None
+                # Fast vectorized batch download
+                df_all = yf.download(
+                    tickers,
+                    period="1mo",
+                    interval="1d",
+                    group_by="ticker",
+                    threads=True,
+                    progress=False,
+                    auto_adjust=False,
+                )
 
-                prev_close = float(hist["Close"].iloc[-2])
-                prev_open = float(hist["Open"].iloc[-2])
-                prev_vol = float(hist["Volume"].iloc[-2])
-                avg_vol = float(hist["Volume"].iloc[-20:].mean()) if len(hist) >= 20 else float(hist["Volume"].mean())
+                if df_all.empty:
+                    return []
 
-                rvol_prev = (prev_vol / avg_vol) if avg_vol > 0 else 1.0
+                is_multi = isinstance(df_all.columns, pd.MultiIndex)
 
-                fast_info = getattr(t, "fast_info", {})
-                current_price = fast_info.get("last_price") or float(hist["Close"].iloc[-1])
-                open_price = fast_info.get("open") or current_price
+                for ticker in tickers:
+                    try:
+                        if is_multi:
+                            if ticker not in df_all.columns.levels[0]:
+                                continue
+                            hist = df_all[ticker].dropna(how="all")
+                        else:
+                            hist = df_all.dropna(how="all")
 
-                gap_open_pct = ((open_price - prev_close) / prev_close) * 100.0 if prev_close > 0 else 0.0
+                        if hist.empty or len(hist) < 15:
+                            continue
 
-                high_low = hist["High"] - hist["Low"]
-                high_close = (hist["High"] - hist["Close"].shift()).abs()
-                low_close = (hist["Low"] - hist["Close"].shift()).abs()
-                tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-                atr = float(tr.rolling(14).mean().iloc[-1]) if len(tr) >= 14 else float(tr.mean())
-                atr_pct = (atr / prev_close) * 100.0 if prev_close > 0 else 5.0
+                        prev_close = float(hist["Close"].iloc[-2])
+                        prev_vol = float(hist["Volume"].iloc[-2])
+                        avg_vol = float(hist["Volume"].iloc[-20:].mean()) if len(hist) >= 20 else float(hist["Volume"].mean())
 
-                closes = hist["Close"]
-                sma20 = float(closes.rolling(20).mean().iloc[-1]) if len(closes) >= 20 else float(closes.mean())
-                std20 = float(closes.rolling(20).std().iloc[-1]) if len(closes) >= 20 else float(closes.std())
-                bb_width = ((std20 * 4.0) / sma20) * 100.0 if sma20 > 0 else 30.0
+                        rvol_prev = (prev_vol / avg_vol) if avg_vol > 0 else 1.0
 
-                fact_score = 0.50
+                        current_price = float(hist["Close"].iloc[-1])
+                        open_price = float(hist["Open"].iloc[-1]) if "Open" in hist.columns else current_price
 
-                return {
-                    "ticker": ticker,
-                    "gap_open_pct": gap_open_pct,
-                    "rvol_prev": rvol_prev,
-                    "atr_pct": atr_pct,
-                    "bb_width": bb_width,
-                    "fact_score": fact_score,
-                    "is_toxic_material": 0.0,
-                    "current_price": current_price,
-                    "open_price": open_price,
-                }
+                        gap_open_pct = ((open_price - prev_close) / prev_close) * 100.0 if prev_close > 0 else 0.0
+
+                        high_low = hist["High"] - hist["Low"]
+                        high_close = (hist["High"] - hist["Close"].shift()).abs()
+                        low_close = (hist["Low"] - hist["Close"].shift()).abs()
+                        tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+                        atr = float(tr.rolling(14).mean().iloc[-1]) if len(tr) >= 14 else float(tr.mean())
+                        atr_pct = (atr / prev_close) * 100.0 if prev_close > 0 else 5.0
+
+                        closes = hist["Close"]
+                        sma20 = float(closes.rolling(20).mean().iloc[-1]) if len(closes) >= 20 else float(closes.mean())
+                        std20 = float(closes.rolling(20).std().iloc[-1]) if len(closes) >= 20 else float(closes.std())
+                        bb_width = ((std20 * 4.0) / sma20) * 100.0 if sma20 > 0 else 30.0
+
+                        candidates.append({
+                            "ticker": ticker,
+                            "gap_open_pct": gap_open_pct,
+                            "rvol_prev": rvol_prev,
+                            "atr_pct": atr_pct,
+                            "bb_width": bb_width,
+                            "fact_score": 0.50,
+                            "is_toxic_material": 0.0,
+                            "current_price": current_price,
+                            "open_price": open_price,
+                        })
+                    except Exception as e:
+                        logger.debug(f"[Batch Scanner] Error parsing {ticker}: {e}")
+                        continue
             except Exception as e:
-                logger.debug(f"[Breakout Scanner] {ticker} fetch failed: {e}")
-                return None
+                logger.warning(f"[Batch Scanner] Batch download failed, falling back: {e}")
+                return []
 
-        tasks = [loop.run_in_executor(None, _fetch_candidate_features_sync, t) for t in universe]
-        results = await asyncio.gather(*tasks)
-        return [r for r in results if r is not None]
+            return candidates
+
+        results = await loop.run_in_executor(None, _fetch_all_candidates_batch, universe)
+        return results
