@@ -609,8 +609,8 @@ class DailyScheduler:
                         try:
                             await run_rotation_daily_cycle(self.toss, self.telegram)
                         except Exception as rotation_error:
-                            logger.exception("로테이션 사이클 실패")
-                            await self.telegram.send_message(f"[로테이션 오류] {rotation_error}")
+                            logger.exception("Rotation cycle failed")
+                            await self.telegram.send_message(f"⚠️ [Rotation Strategy Error] {rotation_error}")
                         last_run_date = today_str
                         continue
                     elif strategy_mode == "breakout":
@@ -623,8 +623,8 @@ class DailyScheduler:
                                 await runner.screen_and_enter(candidates)
                                 asyncio.create_task(runner.run_intraday_exit_loop())
                         except Exception as breakout_error:
-                            logger.exception("브레이크아웃 사이클 실패")
-                            await self.telegram.send_message(f"[브레이크아웃 오류] {breakout_error}")
+                            logger.exception("Breakout cycle failed")
+                            await self.telegram.send_message(f"⚠️ [Breakout Strategy Error] {breakout_error}")
                         last_run_date = today_str
                         continue
                     # 주문 판단 전에 실계좌를 한 번 기준점으로 삼는다. 수동 매도 뒤에

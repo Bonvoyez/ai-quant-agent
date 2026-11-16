@@ -64,12 +64,11 @@ async def main() -> None:
         try:
             await scheduler.run()
         except (KeyboardInterrupt, asyncio.CancelledError):
-            logger.info("Stock Report Bot daemon stopped by user signal.")
+            logger.info("Trading daemon stopped cleanly by user signal.")
             try:
                 await telegram.send_message(
                     "🛑 [AI-Quant-Agent Stopped]\n"
-                    "시스템 작동이 정상 종료되었습니다.\n"
-                    "(Trading daemon shut down cleanly by user signal)"
+                    "Trading daemon shut down cleanly by user signal."
                 )
             except Exception as tg_err:
                 logger.debug(f"Failed to send shutdown Telegram alert: {tg_err}")
@@ -79,9 +78,10 @@ async def main() -> None:
             try:
                 alert = (
                     f"🚨 [CRITICAL ALERT: Daemon Crashed]\n"
-                    f"시스템이 비정상 종료되었습니다!\n\n"
-                    f"• 에러 이유: {type(e).__name__}: {e}\n"
-                    f"• 상세 내역:\n{tb_str[-500:]}"
+                    f"The autonomous trading daemon terminated unexpectedly.\n\n"
+                    f"• Error Type: {type(e).__name__}\n"
+                    f"• Reason: {e}\n"
+                    f"• Traceback (Last 500 chars):\n{tb_str[-500:]}"
                 )
                 await telegram.send_message(alert)
             except Exception as tg_err:
@@ -92,6 +92,6 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("Stock Report Bot 종료 (사용자 인터럽트)")
+        logger.info("Stock Report Bot daemon terminated by user interrupt.")
     except Exception as e:
-        logger.exception(f"치명적인 예외 발생으로 인한 종료: {e}")
+        logger.exception(f"Fatal unhandled exception in main runner: {e}")
