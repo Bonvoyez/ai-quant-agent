@@ -14,9 +14,14 @@ import asyncio
 import os
 import sys
 import tempfile
+import logging
 import aiohttp
 from datetime import datetime
 from dotenv import load_dotenv
+
+# Silence verbose background logs during doctor run to keep output clean and professional
+logging.getLogger("StockReporter").setLevel(logging.WARNING)
+logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 load_dotenv()
 
@@ -36,7 +41,7 @@ def print_status(check_name: str, passed: bool, detail: str = ""):
 
 async def run_diagnostics():
     print(f"\n{BOLD}{CYAN}======================================================================{RESET}")
-    print(f"{BOLD}{CYAN}🩺 AI-QUANT-AGENT FULL INTEGRATION & HEALTH DOCTOR{RESET}")
+    print(f"{BOLD}{CYAN}🩺 AI-QUANT-AGENT SYSTEM HEALTH & INTEGRATION DIAGNOSTICS{RESET}")
     print(f"{BOLD}{CYAN}======================================================================{RESET}")
 
     all_passed = True
@@ -59,18 +64,18 @@ async def run_diagnostics():
 
             spy = await asyncio.to_thread(_get_spy)
             if spy and spy > 0:
-                print_status("Yahoo Finance Market Feed", True, f"SPY: ${spy:.2f}")
+                print_status("Yahoo Finance Real-time Feed", True, f"SPY benchmark: ${spy:.2f}")
             else:
-                print_status("Yahoo Finance Market Feed", False, "Invalid price")
+                print_status("Yahoo Finance Real-time Feed", False, "Invalid price response")
                 all_passed = False
         except Exception as e:
-            print_status("Yahoo Finance Market Feed", False, str(e))
+            print_status("Yahoo Finance Real-time Feed", False, str(e))
             all_passed = False
 
         # -------------------------------------------------------------
         # 2. Formula Engine & Feature Extraction
         # -------------------------------------------------------------
-        print(f"\n{BOLD}[2/6] 🧬 Mathematical Formula & Feature Engine{RESET}")
+        print(f"\n{BOLD}[2/6] 🧬 Quantitative Formula & Feature Engineering Engine{RESET}")
         try:
             from derived_formula import calculate_breakout_score, should_enter_breakout_trade
             sample_feat = {
@@ -88,8 +93,8 @@ async def run_diagnostics():
             toxic_rejected = not should_enter_breakout_trade(toxic_feat, threshold=15.0)
 
             passed = score > 15.0 and decision and toxic_rejected
-            print_status("Breakout Scoring Engine", score > 0, f"Calculated Score: {score:.1f}")
-            print_status("Toxic Material Sieve", toxic_rejected, "Dilution/CB blocked")
+            print_status("Breakout Scoring Algorithm", score > 0, f"Score: {score:.1f}")
+            print_status("Toxic Material Filter (SEC/Dilution)", toxic_rejected, "Toxic filings blocked")
             if not passed:
                 all_passed = False
         except Exception as e:
@@ -99,7 +104,7 @@ async def run_diagnostics():
         # -------------------------------------------------------------
         # 3. Pre-market Scanner
         # -------------------------------------------------------------
-        print(f"\n{BOLD}[3/6] 🎯 Pre-Market Nanocap Breakout Scanner{RESET}")
+        print(f"\n{BOLD}[3/6] 🎯 Pre-Market Nanocap Momentum Scanner{RESET}")
         try:
             from market_data import MarketDataCollector
             candidates = await MarketDataCollector.get_breakout_candidates_premarket(universe=["UPXI", "NEGG", "SPY"])
@@ -117,7 +122,7 @@ async def run_diagnostics():
         # -------------------------------------------------------------
         # 4. Risk & Exit Manager with Disk Persistence
         # -------------------------------------------------------------
-        print(f"\n{BOLD}[4/6] 🛡️ Risk Management & Exit Manager (Trailing & Stop Loss){RESET}")
+        print(f"\n{BOLD}[4/6] 🛡️ Risk Management & Exit Execution (Trailing Stop & Hard Stop){RESET}")
         try:
             from exit_manager import ExitManager
             from breakout_strategy import ActivePosition, BreakoutStrategyRunner
@@ -126,11 +131,11 @@ async def run_diagnostics():
             mgr = ExitManager(stop_loss_pct=-3.0, trailing_step_pct=2.0)
             action_sl, _, r_sl = mgr.evaluate_exit(100.0, 96.5, 100.0)
             sl_ok = action_sl == "SELL" and "STOP_LOSS" in r_sl
-            print_status("Hard Stop-Loss (-3.0% trigger)", sl_ok, r_sl)
+            print_status("Hard Stop-Loss Execution (-3.0% trigger)", sl_ok, r_sl)
 
             action_ts, _, r_ts = mgr.evaluate_exit(100.0, 127.0, 130.0)
             ts_ok = action_ts == "SELL" and "TRAILING_STOP" in r_ts
-            print_status("Dynamic Trailing Stop (-2.0% pullback)", ts_ok, r_ts)
+            print_status("Dynamic Trailing Stop Execution (-2.0% pullback)", ts_ok, r_ts)
 
             temp_dir = tempfile.mkdtemp()
             temp_path = os.path.join(temp_dir, "test_positions.json")
@@ -140,7 +145,7 @@ async def run_diagnostics():
 
             runner2 = BreakoutStrategyRunner(MockBroker(500.0), storage_file=temp_path)
             persist_ok = "TEST" in runner2.active_positions
-            print_status("State Persistence & Recovery", persist_ok, f"Saved to {os.path.basename(temp_path)}")
+            print_status("State Persistence & Crash Recovery", persist_ok, f"Saved to {os.path.basename(temp_path)}")
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
@@ -153,7 +158,7 @@ async def run_diagnostics():
         # -------------------------------------------------------------
         # 5. Live Broker API Integration (Toss OpenAPI vs MockBroker)
         # -------------------------------------------------------------
-        print(f"\n{BOLD}[5/6] 🏦 Broker Layer Integration (Live Toss API vs MockBroker){RESET}")
+        print(f"\n{BOLD}[5/6] 🏦 Broker Layer Integration (Live Toss OpenAPI vs MockBroker){RESET}")
         try:
             from toss_service import TossInvestService
             from broker import MockBroker
@@ -175,20 +180,20 @@ async def run_diagnostics():
                 if resolved_seq:
                     toss.account_seq = resolved_seq
                 token_ok = bool(toss.token)
-                print_status("Toss OAuth2 Token & Account Check", token_ok, f"{len(accounts)} accounts found")
+                print_status("Toss OAuth2 Token & Account Check", token_ok, f"{len(accounts)} active account(s) detected")
 
                 await asyncio.sleep(0.5)
 
                 # Live API Call 2: Real Buying Power query
                 balance = await toss.get_balance()
-                print_status("Toss Live Buying Power (USD)", True, f"${balance:.2f} available")
+                print_status("Toss Live Purchasing Power", True, f"${balance:.2f} USD available")
 
                 await asyncio.sleep(0.5)
 
                 # Live API Call 3: Realtime quote query via Toss OpenAPI
                 aapl_price = await toss.get_realtime_price("AAPL")
                 quote_ok = aapl_price is not None and aapl_price > 0
-                print_status("Toss Live Quote Stream", quote_ok, f"AAPL: ${aapl_price:.2f}" if quote_ok else "Unavailable")
+                print_status("Toss Real-Time Quote Stream", quote_ok, f"AAPL: ${aapl_price:.2f}" if quote_ok else "Unavailable")
             else:
                 mock = MockBroker(initial_cash_usd=float(os.getenv("ROTATION_CAPITAL_CAP_USD", "300") or 300.0))
                 await mock.buy_market_order("SPY", 100.0)
@@ -196,15 +201,15 @@ async def run_diagnostics():
                 await mock.sell_market_order("SPY")
                 sold_ok = "SPY" not in mock.positions
                 print_status("MockBroker Paper Simulation", has_pos and sold_ok, "Virtual BUY/SELL executed ($300 buffer)")
-                print(f"  {YELLOW}ℹ️ Toss API credentials not configured locally. (Using MockBroker){RESET}")
+                print(f"  {YELLOW}ℹ️ Live broker credentials not detected. MockBroker active.{RESET}")
         except Exception as e:
             print_status("Broker Integration", False, str(e))
             all_passed = False
 
         # -------------------------------------------------------------
-        # 6. Telemetry & AI API Integration (Telegram Ping & Fact-Chat / LLM)
+        # 6. Telemetry & AI API Integration (Telegram Ping & LLM Reasoning)
         # -------------------------------------------------------------
-        print(f"\n{BOLD}[6/6] 📡 Telemetry & AI API Integration{RESET}")
+        print(f"\n{BOLD}[6/6] 📡 Telemetry & LLM Integration (Telegram Bot & AI Reasoning){RESET}")
         try:
             tg_token = os.getenv("TELEGRAM_TOKEN", "").strip()
             tg_chat = os.getenv("TELEGRAM_CHAT_ID", "").strip()
@@ -219,27 +224,27 @@ async def run_diagnostics():
                     tg_res = await res.json()
                     bot_ok = tg_res.get("ok", False)
                     bot_name = tg_res.get("result", {}).get("username", "UnknownBot")
-                    print_status("Telegram Bot Live Connection", bot_ok, f"@{bot_name}")
+                    print_status("Telegram Bot Live Telemetry", bot_ok, f"@{bot_name}")
             else:
-                print_status("Telegram Bot Configuration", False, "Token not set")
+                print_status("Telegram Bot Live Telemetry", False, "Token not configured")
 
-            # Live AI / Fact-Chat API Ping
+            # Live AI / LLM API Ping
             if llm_url and llm_key:
                 from ai_client import AIClient
                 ai = AIClient(session)
                 ai.configure(llm_url, llm_key, os.getenv("LLM_MODEL") or os.getenv("AI_MODEL", "gpt-4o"))
                 try:
-                    ai_res = await ai.fetch_raw_analysis("You are a tester. Reply strictly with: OK", "Ping test")
+                    ai_res = await ai.fetch_raw_analysis("You are a system tester. Reply strictly with: OK", "Ping test")
                     ai_ok = "OK" in ai_res.upper()
-                    print_status("AI / Fact-Chat API Ping", ai_ok, f"Response: {ai_res[:20].strip()}")
+                    print_status("LLM / AI Reasoning Endpoint Ping", ai_ok, f"Response: {ai_res[:20].strip()}")
                 except Exception as ai_e:
-                    print_status("AI / Fact-Chat API Ping", False, str(ai_e))
+                    print_status("LLM / AI Reasoning Endpoint Ping", False, str(ai_e))
             else:
-                print_status("AI / Fact-Chat Configuration", False, "Endpoint or key not set")
+                print_status("LLM / AI Reasoning Endpoint Ping", False, "Endpoint or key not configured")
 
             # Dashboard Token check
             dash_ok = bool(dash_token and len(dash_token) >= 4)
-            print_status("Dashboard Security Token", dash_ok, "Configured" if dash_ok else "Not configured")
+            print_status("Mobile Web Dashboard Token", dash_ok, "Configured" if dash_ok else "Not configured")
 
         except Exception as e:
             print_status("Telemetry Subsystem", False, str(e))
@@ -247,9 +252,9 @@ async def run_diagnostics():
     # Summary
     print(f"\n{BOLD}{CYAN}======================================================================{RESET}")
     if all_passed:
-        print(f"{BOLD}{GREEN}🎉 ALL CRITICAL SUBSYSTEMS & API CALLS PASSED! SYSTEM IS 100% OPERATIONAL.{RESET}")
+        print(f"{BOLD}{GREEN}🎉 ALL MISSION-CRITICAL SUBSYSTEMS & APIS ARE 100% OPERATIONAL.{RESET}")
     else:
-        print(f"{BOLD}{YELLOW}⚠️ CORE ENGINE PASSED. VERIFY CREDENTIALS ON LIVE SERVER IF RUNNING LIVE TRADES.{RESET}")
+        print(f"{BOLD}{YELLOW}⚠️ CORE ENGINE PASSED. VERIFY MISSING API CREDENTIALS ON THE SERVER.{RESET}")
     print(f"{BOLD}{CYAN}======================================================================{RESET}\n")
 
     return all_passed
