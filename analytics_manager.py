@@ -1,15 +1,16 @@
 """
-analytics_manager.py: Performance Aggregator, Equity Curve Generator & AI Comparison Engine
+analytics_manager.py: Real-Time Performance Aggregator & Equity Curve Engine
 
-Calculates:
-1. Multi-timeframe performance statistics (Today, 1W, 1M, 1Y, All)
-2. Minimalist equity curve time series for the clean line chart
-3. Funnel conversion & AI Alpha Proof (with AI vs without AI)
-4. Today's screening criteria proximity for near-miss candidates
+Provides 100% genuine live metrics without fake placeholders:
+1. Multi-timeframe performance statistics (Today, 1W, 1M, 1Y, All) from actual trade logs
+2. Clean SVG equity curve time series
+3. Real-time screening funnel and near-miss candidate proximity
+4. Real-time active positions and cash balances
 """
 
 import json
 import logging
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -26,9 +27,6 @@ TRADE_HISTORY_FILE = BASE_DIR / "breakout_trade_history.json"
 SCREENING_FILE = DATA_DIR / "screening_history.json"
 POSITIONS_FILE = BASE_DIR / "breakout_positions.json"
 
-INITIAL_SEED_KRW = 500_000.0
-INITIAL_SEED_USD = 370.0
-TARGET_SEED_KRW = 100_000_000.0
 KRW_USD_RATE = 1360.0
 
 
@@ -48,7 +46,7 @@ class AnalyticsManager:
             return []
 
     def get_timeframe_stats(self, trades: List[Dict[str, Any]], days_limit: Optional[int] = None) -> Dict[str, Any]:
-        """Calculates win rate, return, profit factor, and drawdown for a specific timeframe."""
+        """Calculates win rate, return, profit factor, and drawdown from actual trade records."""
         if not trades:
             return {
                 "trades_count": 0,
@@ -127,17 +125,16 @@ class AnalyticsManager:
             "avg_loss_pct": round(avg_loss, 2),
         }
 
-    def get_equity_curve(self, trades: List[Dict[str, Any]], timeframe: str = "all") -> List[Dict[str, Any]]:
-        """Generates clean line-chart data points from trade history."""
-        points = []
-        start_equity_krw = INITIAL_SEED_KRW
-        curr_equity_krw = start_equity_krw
+    def get_equity_curve(self, trades: List[Dict[str, Any]], current_balance_usd: float, timeframe: str = "all") -> List[Dict[str, Any]]:
+        """Generates clean line-chart data points from genuine trade history."""
+        if not trades:
+            return []
 
+        points = []
         now_ny = datetime.now(NEW_YORK)
         days_map = {"today": 1, "1w": 7, "1m": 30, "1y": 365, "all": None}
         limit_days = days_map.get(timeframe)
 
-        # Filter trades
         filtered = []
         for t in trades:
             etime_str = t.get("entry_time") or t.get("exit_time") or ""
@@ -151,28 +148,20 @@ class AnalyticsManager:
                     continue
             filtered.append(t)
 
-        # Base point
-        start_date_str = (now_ny - timedelta(days=limit_days or 30)).strftime("%Y-%m-%d")
-        points.append({
-            "date": start_date_str,
-            "equity_krw": int(start_equity_krw),
-            "equity_usd": round(start_equity_krw / KRW_USD_RATE, 2),
-            "return_pct": 0.0,
-            "label": "시작",
-        })
+        if not filtered:
+            return []
 
+        cum_ret = 0.0
         for t in filtered:
             date_str = (t.get("exit_time") or t.get("entry_time") or "")[:10]
-            ret = float(t.get("return_pct", 0.0)) / 100.0
-            curr_equity_krw *= (1.0 + ret)
-            cum_pct = ((curr_equity_krw - start_equity_krw) / start_equity_krw) * 100.0
+            ret = float(t.get("return_pct", 0.0))
+            cum_ret += ret
 
             points.append({
                 "date": date_str,
-                "equity_krw": int(curr_equity_krw),
-                "equity_usd": round(curr_equity_krw / KRW_USD_RATE, 2),
-                "return_pct": round(cum_pct, 2),
-                "label": f"{t.get('ticker', '')} ({t.get('return_pct', 0.0):+.1f}%)",
+                "return_pct": round(cum_ret, 2),
+                "ticker": t.get("ticker", ""),
+                "label": f"{t.get('ticker', '')} ({ret:+.1f}%)",
             })
 
         return points
@@ -184,44 +173,22 @@ class AnalyticsManager:
         selected_timeframe: str = "all",
     ) -> Dict[str, Any]:
         """
-        Builds the unified payload for the modern dashboard:
-        - Market status (real-time session, countdown)
-        - Account balances, progress towards 100M KRW
-        - Active position with live trailing / stop-loss lines
-        - Timeframe performance cards (Today, 1W, 1M, 1Y, All)
-        - Equity curve line series
-        - Today's screening funnel & near-miss candidate proximity breakdown
-        - AI Alpha Proof (with AI vs without AI)
+        Builds the live dashboard summary:
+        - Real-time Market status
+        - Real cash balance & active positions
+        - Genuine trade history stats (no fake benchmarks)
+        - Actual daily screening results (or clean waiting state)
         """
         trades = self._load_json(TRADE_HISTORY_FILE)
         screening_records = self._load_json(SCREENING_FILE)
         market_info = get_market_session_info()
 
-        # Fallback to OOS backtest benchmark if no completed live trades yet
-        has_live_trades = len(trades) > 0
-
-        # Multi-timeframe stats
+        # Multi-timeframe stats based purely on genuine trades
         today_stats = self.get_timeframe_stats(trades, days_limit=1)
         w1_stats = self.get_timeframe_stats(trades, days_limit=7)
         m1_stats = self.get_timeframe_stats(trades, days_limit=30)
         y1_stats = self.get_timeframe_stats(trades, days_limit=365)
         all_stats = self.get_timeframe_stats(trades, days_limit=None)
-
-        if not has_live_trades:
-            # Display rigorous 28-Month OOS Backtest Benchmark (597 Trading Days)
-            benchmark_all = {
-                "trades_count": 439,
-                "wins": 305,
-                "losses": 134,
-                "win_rate_pct": 69.5,
-                "cum_return_pct": 20240.0,
-                "profit_factor": 7.68,
-                "max_drawdown_pct": 7.8,
-                "avg_win_pct": 10.13,
-                "avg_loss_pct": -3.00,
-                "is_benchmark": True,
-            }
-            all_stats = benchmark_all
 
         timeframe_map = {
             "today": today_stats,
@@ -232,10 +199,10 @@ class AnalyticsManager:
         }
         active_stats = timeframe_map.get(selected_timeframe, all_stats)
 
-        # Account & Goal Progress
-        bal_usd = current_balance_usd if current_balance_usd > 0 else (INITIAL_SEED_KRW / KRW_USD_RATE)
-        bal_krw = bal_usd * KRW_USD_RATE
-        goal_progress_pct = min(100.0, round((bal_krw / TARGET_SEED_KRW) * 100.0, 2))
+        # Real Account Balances
+        bal_usd = current_balance_usd if current_balance_usd > 0 else 0.0
+        bal_krw = int(bal_usd * KRW_USD_RATE)
+        dry_run = os.getenv("ROTATION_DRY_RUN", "1") != "0"
 
         # Position Card
         pos_list = []
@@ -260,65 +227,32 @@ class AnalyticsManager:
                     "entry_time": p_dict.get("entry_time", ""),
                 })
 
-        # Latest Screening & Near-Misses
-        latest_screening = screening_records[-1] if screening_records else None
-        if not latest_screening:
-            # Baseline placeholder so UI always renders beautifully
-            latest_screening = {
-                "date": datetime.now(NEW_YORK).strftime("%Y-%m-%d"),
-                "ai_mode": "deep",
-                "entered_ticker": None,
-                "counts": {
-                    "scanned_universe": 120,
-                    "passed_quant": 3,
-                    "ai_approved": 1,
-                    "ai_rejected_traps": 2,
-                },
-                "near_misses": [
-                    {
-                        "ticker": "RUNR",
-                        "proximity_score": 86.5,
-                        "status": "NEAR_MISS",
-                        "formula_score": 14.2,
-                        "breakdown": {"gap_sat": 100.0, "atr_sat": 82.0, "rvol_sat": 78.0, "fact_sat": 86.0, "toxic_sat": 100.0},
-                        "miss_reasons": ["상대 거래량(RVOL) 소폭 미달 (1.05x < 기준 1.2x)"],
-                        "features": {"gap_open_pct": 2.4, "rvol_prev": 1.05, "atr_pct": 5.8, "bb_width": 24.2, "fact_score": 0.22, "is_toxic_material": 0},
-                        "ai_mode": "deep",
-                        "ai_summary": "",
-                    },
-                    {
-                        "ticker": "BIOT",
-                        "proximity_score": 68.0,
-                        "status": "AI_REJECTED",
-                        "formula_score": 18.5,
-                        "breakdown": {"gap_sat": 100.0, "atr_sat": 100.0, "rvol_sat": 100.0, "fact_sat": 100.0, "toxic_sat": 0.0},
-                        "miss_reasons": ["유상증자/CB 악재 감지 (Toxic Dilution)", "SEC S-3 워런트 지뢰 감지"],
-                        "features": {"gap_open_pct": 3.1, "rvol_prev": 2.8, "atr_pct": 12.4, "bb_width": 45.0, "fact_score": 0.40, "is_toxic_material": 1},
-                        "ai_mode": "deep",
-                        "ai_summary": "S-3 공시에서 $15M 규모 주식연계증권 전환 대기 물량 감지되어 기습 폭락 위험 차단.",
-                    }
-                ],
-            }
+        # Latest Screening: Only show if an actual screening was recorded today
+        latest_screening = None
+        if screening_records:
+            latest_screening = screening_records[-1]
 
-        # AI Alpha Proof Card
+        # Real AI Trap Count from recorded history
+        real_traps_count = 0
+        if screening_records:
+            for s in screening_records:
+                counts = s.get("counts", {})
+                real_traps_count += counts.get("ai_rejected_traps", 0)
+
         ai_proof = {
-            "without_ai_win_rate": 58.2,
-            "with_ai_win_rate": 78.5,
-            "toxic_traps_bypassed": 14,
-            "capital_defended_usd": 3850.0,
-            "summary": "Deep Pro AI 감사를 통해 SEC S-3 기습 유상증자 14건을 사전에 걸러내어 계좌 손실을 방어했습니다.",
+            "traps_blocked": real_traps_count,
+            "has_records": len(screening_records) > 0,
         }
 
         # Equity Curve Points
-        equity_curve = self.get_equity_curve(trades, timeframe=selected_timeframe)
+        equity_curve = self.get_equity_curve(trades, current_balance_usd=bal_usd, timeframe=selected_timeframe)
 
         return {
             "market": market_info,
             "account": {
                 "balance_usd": round(bal_usd, 2),
-                "balance_krw": int(bal_krw),
-                "goal_target_krw": int(TARGET_SEED_KRW),
-                "goal_progress_pct": goal_progress_pct,
+                "balance_krw": bal_krw,
+                "is_dry_run": dry_run,
                 "active_positions": pos_list,
                 "has_active_position": len(pos_list) > 0,
             },

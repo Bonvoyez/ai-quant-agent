@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quant Ops · Snowball 100M Intelligence</title>
+<title>Quant Ops · Position Intelligence</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -24,7 +24,6 @@
     --warn-dim: #4A3B1C;
     --accent: #5B8DEF;
     --accent-dim: #1E2E4A;
-    --gold: #F4C430;
   }
 
   * { box-sizing: border-box; }
@@ -72,15 +71,12 @@
   .search:focus-visible { outline: 2px solid var(--accent); }
 
   .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 14px; }
-  .panel.gold { border-color: rgba(244, 196, 48, 0.4); }
   .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-soft); }
   .panel-title { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
   .panel-body { padding: 14px; }
 
-  /* Account & Progress */
+  /* Account & Position Grid */
   .account-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-  .progress-bar-bg { width: 100%; height: 8px; background: var(--panel-alt); border-radius: 4px; overflow: hidden; margin-top: 8px; border: 1px solid var(--border-soft); }
-  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--pos) 100%); transition: width 0.4s ease; }
 
   /* KPIs */
   .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
@@ -88,9 +84,8 @@
   .kpi-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
   .kpi-value { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600; line-height: 1.1; }
   .kpi-sub { font-size: 11px; color: var(--muted-dim); margin-top: 4px; }
-  .pos { color: var(--pos); } .neg { color: var(--neg); } .warn { color: var(--warn); } .gold-text { color: var(--gold); }
+  .pos { color: var(--pos); } .neg { color: var(--neg); } .warn { color: var(--warn); }
 
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
   .grid-main { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; margin-bottom: 14px; }
 
   .badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 3px; }
@@ -105,21 +100,12 @@
   .prox-meter { width: 120px; height: 6px; background: var(--panel); border-radius: 3px; overflow: hidden; margin-top: 4px; }
   .prox-fill { height: 100%; border-radius: 3px; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  thead th { text-align: left; padding: 6px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
-  tbody td { padding: 7px 8px; border-bottom: 1px solid var(--border-soft); }
-  tbody tr { cursor: pointer; }
-  tbody tr:hover { background: var(--panel-alt); }
-  .reason-cell { color: var(--muted); max-width: 340px; }
-  .reason-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 300px; vertical-align: middle; }
-  .reason-text.open { white-space: normal; }
-
   .banner { font-size: 12px; padding: 8px 12px; border-radius: 4px; margin-bottom: 14px; font-family: 'IBM Plex Mono', monospace; }
   .banner.error { background: var(--neg-dim); border: 1px solid var(--neg); color: var(--neg); }
   .banner.info { background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); }
 
   @media (max-width: 900px) {
-    .grid-main, .grid2, .account-grid { grid-template-columns: 1fr !important; }
+    .grid-main, .account-grid { grid-template-columns: 1fr !important; }
     .kpis { grid-template-columns: repeat(2, 1fr) !important; }
   }
 </style>
@@ -146,40 +132,36 @@
     <div class="brand">
       <span class="dot"></span>
       <div>
-        <div class="title display">QUANT SNOWBALL 100M</div>
-        <div class="subtitle" id="statusLine">Position Intelligence · 연결 중...</div>
+        <div class="title display">QUANT OPS · POSITION INTELLIGENCE</div>
+        <div class="subtitle" id="statusLine">Autonomous Trading System</div>
       </div>
     </div>
     <div class="controls">
-      <input class="search" id="searchInput" placeholder="TICKER" />
       <button class="btn" id="refreshBtn">↻ Refresh</button>
     </div>
   </div>
 
   <div id="banners"></div>
 
-  <!-- Account & Snowball Progress Panel -->
+  <!-- Real Account & Position Grid -->
   <div class="account-grid">
-    <div class="panel gold">
+    <div class="panel">
       <div class="panel-head">
-        <span class="panel-title gold-text">💼 내 계좌 & 1억 스노우볼 목표</span>
-        <span class="mono" style="font-size:10px;color:var(--gold);" id="accGoalPct">0.00% 달성</span>
+        <span class="panel-title">💼 내 계좌 자산 현황 (Account Assets)</span>
+        <span class="badge badge-pending" id="accModeBadge">확인 중</span>
       </div>
       <div class="panel-body">
         <div style="display:flex;justify-content:space-between;align-items:flex-end;">
           <div>
-            <div class="kpi-label">총 평가 자산 (1억 원 목표)</div>
-            <div class="display" style="font-size:26px;font-weight:700;" id="accBalanceKrw">₩500,000</div>
-            <div class="mono" style="font-size:11px;color:var(--muted);" id="accBalanceUsd">$370.00 USD</div>
+            <div class="kpi-label">주문 가능 외화 예수금 (Buying Power)</div>
+            <div class="display" style="font-size:26px;font-weight:700;" id="accBalanceUsd">$0.00 USD</div>
+            <div class="mono" style="font-size:12px;color:var(--muted);margin-top:2px;" id="accBalanceKrw">약 ₩0 KRW</div>
           </div>
           <div style="text-align:right;">
-            <div class="kpi-label">목표 달성선</div>
-            <div class="display" style="font-size:16px;color:var(--gold);font-weight:600;">₩100,000,000</div>
-            <div class="mono" style="font-size:10px;color:var(--muted);">초기 50만 ➔ 200배 복리</div>
+            <div class="kpi-label">계좌 연동 상태</div>
+            <div class="mono" style="font-size:11px;color:var(--pos);" id="accConnectStatus">토스증권 OpenAPI 연결됨</div>
+            <div class="mono" style="font-size:10px;color:var(--muted-dim);margin-top:2px;">환율: 1 USD ≈ ₩1,360</div>
           </div>
-        </div>
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" id="accGoalFill" style="width: 0.5%;"></div>
         </div>
       </div>
     </div>
@@ -191,7 +173,7 @@
       </div>
       <div class="panel-body" id="activePositionBox">
         <div style="padding:14px 0;text-align:center;color:var(--muted);font-size:12px;">
-          현재 진입 중인 포지션이 없습니다. (칼손절 -3% 및 고점대비 -2% 트레일링 준비 완료)
+          현재 진입 포지션이 없습니다. (칼손절 -3% 및 고점대비 -2% 트레일링 대기)
         </div>
       </div>
     </div>
@@ -249,7 +231,7 @@
   <div class="panel">
     <div class="panel-head">
       <div style="display:flex;align-items:center;gap:8px;">
-        <span class="panel-title">📈 자산 성장 곡선 (Snowball Equity Curve)</span>
+        <span class="panel-title">📈 실시간 자산 성장 곡선 (Realized Equity Curve)</span>
       </div>
       <div style="display:flex;gap:4px;" id="timeframeButtons">
         <button class="btn" data-tf="today">오늘</button>
@@ -262,14 +244,14 @@
     <div class="panel-body">
       <!-- Dynamic Performance KPIs -->
       <div class="kpis" id="dynamicKpis">
-        <div class="kpi"><div class="kpi-label">총 매매 횟수</div><div class="kpi-value" id="kpiTrades">—</div><div class="kpi-sub" id="kpiTradesSub">기록 로딩 중</div></div>
-        <div class="kpi"><div class="kpi-label">승률 (Win Rate)</div><div class="kpi-value pos" id="kpiWinRate">—</div><div class="kpi-sub" id="kpiWinSub">—</div></div>
-        <div class="kpi"><div class="kpi-label">누적 수익률</div><div class="kpi-value pos" id="kpiReturn">—</div><div class="kpi-sub">복리 계산 기준</div></div>
+        <div class="kpi"><div class="kpi-label">총 매매 횟수</div><div class="kpi-value" id="kpiTrades">0</div><div class="kpi-sub" id="kpiTradesSub">0승 0패</div></div>
+        <div class="kpi"><div class="kpi-label">승률 (Win Rate)</div><div class="kpi-value" id="kpiWinRate">—</div><div class="kpi-sub" id="kpiWinSub">정산 대기</div></div>
+        <div class="kpi"><div class="kpi-label">누적 수익률</div><div class="kpi-value" id="kpiReturn">0.00%</div><div class="kpi-sub">실현 손익 기준</div></div>
         <div class="kpi"><div class="kpi-label">손익비 (Profit Factor)</div><div class="kpi-value" id="kpiPf">—</div><div class="kpi-sub" id="kpiPfSub">—</div></div>
-        <div class="kpi"><div class="kpi-label">최대 낙폭 (MDD)</div><div class="kpi-value neg" id="kpiMdd">—</div><div class="kpi-sub">고점 대비 최대 손실</div></div>
+        <div class="kpi"><div class="kpi-label">최대 낙폭 (MDD)</div><div class="kpi-value" id="kpiMdd">0.0%</div><div class="kpi-sub">고점 대비 손실</div></div>
       </div>
       <!-- SVG Line Chart -->
-      <div id="cleanLineChartContainer" style="width:100%;min-height:220px;"></div>
+      <div id="cleanLineChartContainer" style="width:100%;min-height:160px;"></div>
     </div>
   </div>
 
@@ -281,44 +263,32 @@
         <span class="mono" style="font-size:10px;color:var(--muted);" id="screeningDate"></span>
       </div>
       <div class="panel-body">
-        <div style="display:flex;gap:10px;margin-bottom:12px;font-size:11px;" class="mono" id="screeningFunnelCounts">
-          <span>전수 탐색: <strong style="color:var(--text);">120개</strong></span> ➔
-          <span>돌파 충족: <strong style="color:var(--accent);" id="cntPassedQuant">—</strong></span> ➔
-          <span>AI 감사 승인: <strong style="color:var(--pos);" id="cntAiApproved">—</strong></span> ➔
-          <span>지뢰 차단: <strong style="color:var(--neg);" id="cntAiTraps">—</strong></span>
-        </div>
         <div id="nearMissContainer">
           <!-- Rendered dynamically -->
         </div>
       </div>
     </div>
 
-    <!-- AI Alpha Proof Card -->
+    <!-- AI Sentinel Status Card -->
     <div class="panel">
       <div class="panel-head">
-        <span class="panel-title">🧠 AI Deep Audit 안전판 기여도</span>
+        <span class="panel-title">🧠 AI Sentinel 실시간 감시 상태</span>
       </div>
       <div class="panel-body">
-        <div style="font-size:12px;line-height:1.6;color:var(--muted);margin-bottom:14px;" id="aiProofSummary">
-          Deep Pro AI 실시간 감사를 통해 SEC 공시(S-3 유상증자, 워런트 전환) 지뢰를 사전에 차단하여 원금을 방어합니다.
+        <div style="font-size:12px;line-height:1.6;color:var(--muted);margin-bottom:14px;">
+          Deep Pro AI가 SEC EDGAR 실시간 공시(S-3 유상증자, 워런트 전환 등)를 감사하여 독성 지뢰를 사전 차단합니다.
         </div>
-        <div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--panel-alt);border-radius:4px;margin-bottom:8px;" class="mono">
-          <span style="color:var(--muted);">AI 미적용 승률</span>
-          <span style="font-weight:600;color:var(--warn);" id="aiProofWithout">58.2%</span>
+        <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--panel-alt);border-radius:4px;margin-bottom:8px;" class="mono">
+          <span style="color:var(--muted);">현재 AI 상태</span>
+          <span style="font-weight:600;color:var(--pos);">👑 Deep Pro (Active)</span>
         </div>
-        <div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--panel-alt);border-radius:4px;margin-bottom:8px;" class="mono">
-          <span style="color:var(--pos);font-weight:600;">👑 Deep Pro AI 적용 승률</span>
-          <span style="font-weight:700;color:var(--pos);" id="aiProofWith">78.5% (+20.3%p)</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--panel-alt);border-radius:4px;" class="mono">
-          <span style="color:var(--muted);">사전 차단된 유증 지뢰</span>
-          <span style="font-weight:600;color:var(--neg);" id="aiProofTraps">14건 방어</span>
+        <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--panel-alt);border-radius:4px;" class="mono">
+          <span style="color:var(--muted);">누적 차단된 유증 지뢰</span>
+          <span style="font-weight:600;color:var(--accent);" id="aiProofTraps">0건 (안전)</span>
         </div>
       </div>
     </div>
   </div>
-
-  <div id="content"></div>
 </div>
 
 <script>
@@ -327,7 +297,7 @@
 
   const params = new URLSearchParams(window.location.search);
   const TOKEN = params.get("token") || "";
-  const REFRESH_MS = 30000;
+  const REFRESH_MS = 15000;
 
   const C = {
     pos: "#45C8A0", posDim: "#1E4A3E",
@@ -340,13 +310,8 @@
 
   let STATE = {
     summary: null,
-    history: [],
-    activeTrades: [],
     settings: {},
-    search: "",
-    expanded: {},
     timeframe: "all",
-    loaded: false,
   };
 
   function escapeHtml(str) {
@@ -360,41 +325,38 @@
     return sign + v.toFixed(digits) + "%";
   }
 
-  function fmtKrw(num) {
-    return "₩" + Math.round(num).toLocaleString("ko-KR");
-  }
-
-  // --- Clean SVG Line Chart Renderer ---
   function renderCleanLineChart(points, containerId) {
     const el = document.getElementById(containerId);
     if (!el) return;
     if (!points || points.length === 0) {
-      el.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-size:12px;">선택한 기간의 매매 데이터가 없습니다.</div>`;
+      el.innerHTML = `
+        <div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:12px;">
+          아직 체결/정산된 실시간 매매 기록이 없습니다.<br>
+          <span style="font-size:11px;color:var(--muted-dim);">(미국 정규장이 열리고 매매가 집행되면 실시간 누적 수익률 곡선이 기록됩니다)</span>
+        </div>
+      `;
       return;
     }
 
-    const w = 800, h = 240, padL = 60, padR = 20, padT = 20, padB = 30;
-    const ys = points.map(p => p.equity_krw || p.return_pct || 0);
-    const minVal = Math.min(...ys);
-    const maxVal = Math.max(...ys);
-    const range = (maxVal - minVal) || 1000;
+    const w = 800, h = 220, padL = 50, padR = 20, padT = 20, padB = 30;
+    const ys = points.map(p => p.return_pct || 0);
+    const minVal = Math.min(0, ...ys);
+    const maxVal = Math.max(1, ...ys);
+    const range = (maxVal - minVal) || 1;
     const yMin = minVal - range * 0.1;
     const yMax = maxVal + range * 0.1;
 
     const xs = points.map((_, i) => padL + (i / Math.max(1, points.length - 1)) * (w - padL - padR));
-    const ysPx = points.map(p => padT + (1 - ((p.equity_krw || p.return_pct || 0) - yMin) / (yMax - yMin)) * (h - padT - padB));
+    const ysPx = points.map(p => padT + (1 - ((p.return_pct || 0) - yMin) / (yMax - yMin)) * (h - padT - padB));
 
     const pathD = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${ysPx[i].toFixed(1)}`).join(" ");
     const areaD = `${pathD} L${xs[xs.length - 1].toFixed(1)},${(h - padB)} L${xs[0].toFixed(1)},${(h - padB)} Z`;
 
     const dots = xs.map((x, i) => {
       const p = points[i];
-      const title = `${p.date}: ${fmtKrw(p.equity_krw)} (${fmtPct(p.return_pct)})`;
+      const title = `${p.date}: ${p.label || ''}`;
       return `<circle cx="${x.toFixed(1)}" cy="${ysPx[i].toFixed(1)}" r="3.5" fill="${C.pos}" stroke="#0A0E13" stroke-width="1.5"><title>${escapeHtml(title)}</title></circle>`;
     }).join("");
-
-    const firstDate = points[0].date || "";
-    const lastDate = points[points.length - 1].date || "";
 
     el.innerHTML = `
       <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
@@ -404,21 +366,15 @@
             <stop offset="100%" stop-color="${C.pos}" stop-opacity="0.0"/>
           </linearGradient>
         </defs>
-        <!-- Horizontal Grid Lines -->
         <line x1="${padL}" y1="${padT}" x2="${w - padR}" y2="${padT}" stroke="${C.borderSoft}" stroke-dasharray="3 3"/>
-        <line x1="${padL}" y1="${(padT + h - padB) / 2}" x2="${w - padR}" y2="${(padT + h - padB) / 2}" stroke="${C.borderSoft}" stroke-dasharray="3 3"/>
         <line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" stroke="${C.border}"/>
-
-        <!-- Area & Line -->
         <path d="${areaD}" fill="url(#chartGradient)"/>
         <path d="${pathD}" fill="none" stroke="${C.pos}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
         ${dots}
-
-        <!-- Axis Labels -->
-        <text x="${padL}" y="${padT + 10}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace">${fmtKrw(maxVal)}</text>
-        <text x="${padL}" y="${h - padB - 5}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace">${fmtKrw(minVal)}</text>
-        <text x="${padL}" y="${h - 10}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace">${escapeHtml(firstDate)}</text>
-        <text x="${w - padR}" y="${h - 10}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace" text-anchor="end">${escapeHtml(lastDate)}</text>
+        <text x="${padL}" y="${padT + 10}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace">${fmtPct(maxVal)}</text>
+        <text x="${padL}" y="${h - padB - 5}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace">${fmtPct(minVal)}</text>
+        <text x="${padL}" y="${h - 10}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace">${escapeHtml(points[0].date || '')}</text>
+        <text x="${w - padR}" y="${h - 10}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace" text-anchor="end">${escapeHtml(points[points.length - 1].date || '')}</text>
       </svg>
     `;
   }
@@ -442,10 +398,17 @@
 
   function updateAccountBox(acc) {
     if (!acc) return;
-    document.getElementById("accBalanceKrw").textContent = fmtKrw(acc.balance_krw);
     document.getElementById("accBalanceUsd").textContent = `$${acc.balance_usd.toFixed(2)} USD`;
-    document.getElementById("accGoalPct").textContent = `${acc.goal_progress_pct.toFixed(2)}% 달성`;
-    document.getElementById("accGoalFill").style.width = `${Math.max(0.5, acc.goal_progress_pct)}%`;
+    document.getElementById("accBalanceKrw").textContent = `약 ₩${acc.balance_krw.toLocaleString('ko-KR')} KRW`;
+
+    const modeBadge = document.getElementById("accModeBadge");
+    if (acc.is_dry_run) {
+      modeBadge.textContent = "가상매매 (DRY-RUN)";
+      modeBadge.className = "badge badge-pending";
+    } else {
+      modeBadge.textContent = "실계좌 주문 (LIVE)";
+      modeBadge.className = "badge badge-win";
+    }
 
     const posBox = document.getElementById("activePositionBox");
     const watchStatus = document.getElementById("posWatchStatus");
@@ -483,23 +446,31 @@
       watchStatus.style.color = C.muted;
       posBox.innerHTML = `
         <div style="padding:14px 0;text-align:center;color:var(--muted);font-size:12px;">
-          현재 진입 포지션이 없습니다. (신호 발생 시 Top 1 단일 몰빵 자동 진입 대기)
+          현재 진입 포지션이 없습니다. (조건 만족 시 Top 1 단일 몰빵 자동 진입 대기)
         </div>
       `;
     }
   }
 
   function updateScreeningAndNearMisses(screening) {
-    if (!screening) return;
-    document.getElementById("screeningDate").textContent = `${screening.date} (AI: ${screening.ai_mode.toUpperCase()})`;
-    document.getElementById("cntPassedQuant").textContent = `${screening.counts.passed_quant}개`;
-    document.getElementById("cntAiApproved").textContent = `${screening.counts.ai_approved}개`;
-    document.getElementById("cntAiTraps").textContent = `${screening.counts.ai_rejected_traps}건`;
-
     const container = document.getElementById("nearMissContainer");
+    const dateEl = document.getElementById("screeningDate");
+
+    if (!screening) {
+      dateEl.textContent = "금일 스캔 대기 중";
+      container.innerHTML = `
+        <div style="padding:32px 16px;text-align:center;color:var(--muted);font-size:12px;">
+          오늘 장전 스크리닝 대기 중입니다.<br>
+          <span style="font-size:11px;color:var(--muted-dim);margin-top:4px;display:inline-block;">(미국 정규장 개장 30분 전 120개 핵심 나노캡 유니버스를 고속 스캔합니다)</span>
+        </div>
+      `;
+      return;
+    }
+
+    dateEl.textContent = `${screening.date} (AI: ${screening.ai_mode.toUpperCase()})`;
     const nearMisses = screening.near_misses || [];
     if (nearMisses.length === 0) {
-      container.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:10px 0;">오늘 아깝게 탈락한 종목이 없습니다.</div>`;
+      container.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:20px 0;text-align:center;">오늘 아깝게 탈락한 종목이 없습니다.</div>`;
       return;
     }
 
@@ -537,20 +508,21 @@
 
   function updateTimeframeKPIs(stats) {
     if (!stats) return;
-    document.getElementById("kpiTrades").textContent = stats.trades_count || 0;
-    document.getElementById("kpiTradesSub").textContent = `${stats.wins || 0}승 ${stats.losses || 0}패` + (stats.is_benchmark ? " (28M 검증)" : "");
+    const cnt = stats.trades_count || 0;
+    document.getElementById("kpiTrades").textContent = cnt;
+    document.getElementById("kpiTradesSub").textContent = `${stats.wins || 0}승 ${stats.losses || 0}패`;
 
     const wrEl = document.getElementById("kpiWinRate");
-    wrEl.textContent = stats.win_rate_pct ? `${stats.win_rate_pct.toFixed(1)}%` : "—";
-    wrEl.className = "kpi-value " + ((stats.win_rate_pct || 0) >= 50 ? "pos" : "neg");
-    document.getElementById("kpiWinSub").textContent = `평균 승리 +${(stats.avg_win_pct || 0).toFixed(1)}%`;
+    wrEl.textContent = cnt > 0 ? `${(stats.win_rate_pct || 0).toFixed(1)}%` : "—";
+    wrEl.className = "kpi-value " + (cnt > 0 && stats.win_rate_pct >= 50 ? "pos" : "neg");
+    document.getElementById("kpiWinSub").textContent = cnt > 0 ? `평균 +${(stats.avg_win_pct || 0).toFixed(1)}%` : "정산 대기";
 
     const retEl = document.getElementById("kpiReturn");
     retEl.textContent = fmtPct(stats.cum_return_pct);
     retEl.className = "kpi-value " + ((stats.cum_return_pct || 0) >= 0 ? "pos" : "neg");
 
-    document.getElementById("kpiPf").textContent = (stats.profit_factor || 0).toFixed(2);
-    document.getElementById("kpiPfSub").textContent = `손익비 ${(stats.profit_factor || 0) >= 2.0 ? '최상급' : '보통'}`;
+    document.getElementById("kpiPf").textContent = cnt > 0 ? (stats.profit_factor || 0).toFixed(2) : "—";
+    document.getElementById("kpiPfSub").textContent = cnt > 0 ? `손익비 ${(stats.profit_factor || 0) >= 2.0 ? '최상급' : '보통'}` : "—";
 
     document.getElementById("kpiMdd").textContent = `-${(stats.max_drawdown_pct || 0).toFixed(1)}%`;
   }
@@ -559,7 +531,10 @@
     if (!TOKEN) return;
     try {
       const res = await fetch(`/api/summary?token=${encodeURIComponent(TOKEN)}&timeframe=${encodeURIComponent(timeframe)}`);
-      if (res.status === 401) return;
+      if (res.status === 401) {
+        document.getElementById("statusLine").textContent = "인증 실패: DASHBOARD_TOKEN 확인 필요";
+        return;
+      }
       const data = await res.json();
       STATE.summary = data;
       STATE.timeframe = timeframe;
@@ -571,13 +546,13 @@
       renderCleanLineChart(data.equity_curve, "cleanLineChartContainer");
 
       if (data.ai_proof) {
-        document.getElementById("aiProofWithout").textContent = `${data.ai_proof.without_ai_win_rate}%`;
-        document.getElementById("aiProofWith").textContent = `👑 Deep Pro AI ${data.ai_proof.with_ai_win_rate}%`;
-        document.getElementById("aiProofTraps").textContent = `${data.ai_proof.toxic_traps_bypassed}건 사전 차단`;
-        document.getElementById("aiProofSummary").textContent = data.ai_proof.summary;
+        const trapCount = data.ai_proof.traps_blocked || 0;
+        document.getElementById("aiProofTraps").textContent = `${trapCount}건 (${trapCount === 0 ? "안전" : "차단 완료"})`;
       }
+
+      document.getElementById("statusLine").textContent = `정상 연결됨 · 마지막 갱신 ${new Date().toLocaleTimeString('ko-KR')}`;
     } catch (e) {
-      console.warn("Failed to load summary:", e);
+      document.getElementById("statusLine").textContent = "연결 오류: " + e.message;
     }
   }
 
