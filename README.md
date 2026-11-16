@@ -76,6 +76,40 @@ An asynchronous, broker-agnostic quantitative trading and portfolio management p
 - Multi-timeframe relative momentum ranking across 10 major US sector ETFs.
 - Inverse-volatility risk budgeting with scheduled rebalancing and turnover caps.
 
+### 3. Local Machine Learning & Counterfactual Logging (`trade_logger.py`)
+- **Counterfactual Mining (대조군 학습)**: Logs not only executed positions but also near-miss candidates (-20% to -30% threshold runners-up) and AI-rejected toxic traps.
+- **Offline ML-Ready Datasets**: Atomically written to `data/training_dataset.parquet` and `data/training_dataset.jsonl` for offline Windows PC model fine-tuning (LightGBM, XGBoost, LoRA).
+- **Proximity Analytics**: Measures exact metric-by-metric distance to the Gold Standard breakout threshold.
+
+### 4. Interactive Monitoring & Analytics Dashboard (`dashboard.html`)
+- **Real-Time Market Pulse**: Dynamic session status badge (REGULAR, PRE_MARKET, CLOSED, HOLIDAY) with live second-by-second countdown to open/close events.
+- **Account & 100M Goal Widget**: Real-time equity calculation in KRW and USD with visual progress toward the ₩100M snowball milestone.
+- **Clean SVG Line Chart**: Zero-dependency minimalist vector equity curve with instant timeframe switching (Today, 1W, 1M, 1Y, All).
+- **Criteria Proximity Funnel**: Visualizes today's screening funnel and reveals the top near-miss stocks with exact miss reasons.
+
+---
+
+## Security, Privacy & Non-Custodial Architecture
+
+This system is built from the ground up with enterprise-grade defensive security:
+
+1. **Zero External Telemetry & Zero Backdoors**:
+   - 100% pure Python, open-source codebase without compiled binary blobs, obfuscation, or third-party phone-home tracking.
+   - Outbound network requests are strictly confined to:
+     - Designated Broker API (`openapi-invest.tossinvest.com`)
+     - Designated LLM Gateway (`LLM_BASE_URL` in `.env`)
+     - Telegram Alerts (`api.telegram.org`)
+     - Public Market Quotes (`query1.finance.yahoo.com`)
+2. **Credential & Secret Isolation**:
+   - API keys, app secrets, and webhook tokens reside exclusively in local `.env` files.
+   - Strict `.gitignore` enforcement ensures `.env` has never been and will never be committed to source control.
+3. **Zero Secret Leakage in Logs**:
+   - Logging formatters across all modules strictly sanitize and omit API keys, tokens, and authorization headers.
+4. **Timing-Attack Resilient Authentication**:
+   - Dashboard endpoints use `hmac.compare_digest` for constant-time token comparison, preventing timing-based credential brute-forcing.
+5. **Transport Security**:
+   - When deployed behind Caddy reverse proxy, all web traffic is protected with automatic TLS/HTTPS encryption and Argon2id HTTP Basic Authentication.
+
 ---
 
 ## Project Structure
