@@ -181,12 +181,17 @@ async def run_diagnostics():
                     toss.account_seq = resolved_seq
                 token_ok = bool(toss.token)
                 print_status("Toss OAuth2 Token & Account Check", token_ok, f"{len(accounts)} active account(s) detected")
+                if not token_ok:
+                    all_passed = False
 
                 await asyncio.sleep(0.5)
 
                 # Live API Call 2: Real Buying Power query
                 balance = await toss.get_balance()
-                print_status("Toss Live Purchasing Power", True, f"${balance:.2f} USD available")
+                balance_ok = balance is not None and balance >= 0
+                print_status("Toss Live Purchasing Power", balance_ok, f"${balance:.2f} USD available")
+                if not balance_ok:
+                    all_passed = False
 
                 await asyncio.sleep(0.5)
 
@@ -194,14 +199,19 @@ async def run_diagnostics():
                 aapl_price = await toss.get_realtime_price("AAPL")
                 quote_ok = aapl_price is not None and aapl_price > 0
                 print_status("Toss Real-Time Quote Stream", quote_ok, f"AAPL: ${aapl_price:.2f}" if quote_ok else "Unavailable")
+                if not quote_ok:
+                    all_passed = False
             else:
                 mock = MockBroker(initial_cash_usd=float(os.getenv("ROTATION_CAPITAL_CAP_USD", "300") or 300.0))
                 await mock.buy_market_order("SPY", 100.0)
                 has_pos = "SPY" in mock.positions
                 await mock.sell_market_order("SPY")
                 sold_ok = "SPY" not in mock.positions
-                print_status("MockBroker Paper Simulation", has_pos and sold_ok, "Virtual BUY/SELL executed ($300 buffer)")
+                mock_ok = has_pos and sold_ok
+                print_status("MockBroker Paper Simulation", mock_ok, "Virtual BUY/SELL executed ($300 buffer)")
                 print(f"  {YELLOW}ℹ️ Live broker credentials not detected. MockBroker active.{RESET}")
+                if not mock_ok:
+                    all_passed = False
         except Exception as e:
             print_status("Broker Integration", False, str(e))
             all_passed = False
@@ -224,9 +234,12 @@ async def run_diagnostics():
                     tg_res = await res.json()
                     bot_ok = tg_res.get("ok", False)
                     bot_name = tg_res.get("result", {}).get("username", "UnknownBot")
-                    print_status("Telegram Bot Live Telemetry", bot_ok, f"@{bot_name}")
+                    print_status("Telegram Bot Live Telemetry", bot_ok, f"@{bot_name}" if bot_ok else "Invalid token")
+                    if not bot_ok:
+                        all_passed = False
             else:
-                print_status("Telegram Bot Live Telemetry", False, "Token not configured")
+                print_status("Telegram Bot Live Telemetry", False, "Token or chat ID not configured")
+                all_passed = False
 
             # Live AI / LLM API Ping
             if llm_url and llm_key:
@@ -237,24 +250,32 @@ async def run_diagnostics():
                     ai_res = await ai.fetch_raw_analysis("You are a system tester. Reply strictly with: OK", "Ping test")
                     ai_ok = "OK" in ai_res.upper()
                     print_status("LLM / AI Reasoning Endpoint Ping", ai_ok, f"Response: {ai_res[:20].strip()}")
+                    if not ai_ok:
+                        all_passed = False
                 except Exception as ai_e:
                     print_status("LLM / AI Reasoning Endpoint Ping", False, str(ai_e))
+                    all_passed = False
             else:
                 print_status("LLM / AI Reasoning Endpoint Ping", False, "Endpoint or key not configured")
+                all_passed = False
 
             # Dashboard Token check
             dash_ok = bool(dash_token and len(dash_token) >= 4)
             print_status("Mobile Web Dashboard Token", dash_ok, "Configured" if dash_ok else "Not configured")
+            if not dash_ok:
+                all_passed = False
 
         except Exception as e:
             print_status("Telemetry Subsystem", False, str(e))
+            all_passed = False
 
     # Summary
     print(f"\n{BOLD}{CYAN}======================================================================{RESET}")
     if all_passed:
         print(f"{BOLD}{GREEN}🎉 ALL MISSION-CRITICAL SUBSYSTEMS & APIS ARE 100% OPERATIONAL.{RESET}")
     else:
-        print(f"{BOLD}{YELLOW}⚠️ CORE ENGINE PASSED. VERIFY MISSING API CREDENTIALS ON THE SERVER.{RESET}")
+        print(f"{BOLD}{RED}❌ DIAGNOSTICS DETECTED SUBSYSTEM FAILURES. SYSTEM IS NOT FULLY OPERATIONAL.{RESET}")
+        print(f"  {YELLOW}Please review and resolve the [FAIL] item(s) highlighted above.{RESET}")
     print(f"{BOLD}{CYAN}======================================================================{RESET}\n")
 
     return all_passed
