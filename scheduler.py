@@ -84,13 +84,24 @@ class DailyScheduler:
         self.settings = SettingsManager()
         self.strategy_evaluator = StrategyEvaluator()
         self.shadow_portfolio = ShadowPortfolio()
+        self.market = MarketDataCollector
 
-        self.toss = TossInvestService(
-            session=session,
-            client_id=os.getenv("TOSS_APP_KEY", ""),
-            client_secret=os.getenv("TOSS_APP_SECRET", ""),
-            account_seq=os.getenv("TOSS_ACCOUNT_NO", "")
-        )
+        dry_run = os.getenv("ROTATION_DRY_RUN", "1") != "0"
+        toss_key = os.getenv("TOSS_APP_KEY", "")
+
+        from broker import MockBroker
+        if not toss_key and dry_run:
+            logger.info("🧪 [Scheduler] Toss 자격증명 부재 및 Dry-Run 감지 -> MockBroker 활성화")
+            self.broker = MockBroker(initial_cash_usd=float(os.getenv("ROTATION_CAPITAL_CAP_USD", "1000") or 1000.0))
+            self.toss = self.broker
+        else:
+            self.toss = TossInvestService(
+                session=session,
+                client_id=os.getenv("TOSS_APP_KEY", ""),
+                client_secret=os.getenv("TOSS_APP_SECRET", ""),
+                account_seq=os.getenv("TOSS_ACCOUNT_NO", "")
+            )
+            self.broker = self.toss
 
         # [핵심 수정] active_trades를 항상 빈 리스트로 시작하지 않고,
         # 파일(active_trades.json)에서 복원합니다.

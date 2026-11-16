@@ -18,6 +18,11 @@ logging.basicConfig(
 logger = logging.getLogger("StockReporter")
 
 def validate_env() -> None:
+    is_paper = os.getenv("STRATEGY_MODE", "").lower() == "paper" or os.getenv("ROTATION_DRY_RUN", "1") != "0"
+    if is_paper:
+        logger.info("🧪 [Paper Trading Mode Detected] 외부 증권사 및 텔레그램 필수 자격증명 검증을 건너뜁니다.")
+        return
+
     required = {
         "LLM_BASE_URL (or AI_BASE_URL)": LLM_BASE_URL,
         "LLM_API_KEY (or AI_API_KEY)": LLM_API_KEY,
@@ -26,9 +31,6 @@ def validate_env() -> None:
         "TOSS_APP_KEY": os.getenv("TOSS_APP_KEY", ""),
         "TOSS_APP_SECRET": os.getenv("TOSS_APP_SECRET", ""),
         "TOSS_ACCOUNT_NO": os.getenv("TOSS_ACCOUNT_NO", ""),
-        # [신규] 대시보드를 공인 IP/도메인으로 열 계획이므로 토큰 인증이 필수입니다.
-        # 비어있으면 dashboard_server.py가 모든 요청을 거부하도록 만들어뒀지만,
-        # 애초에 설정 자체를 빠뜨리고 배포하는 실수를 막기 위해 여기서도 확인합니다.
         "DASHBOARD_TOKEN": os.getenv("DASHBOARD_TOKEN", ""),
     }
     missing = [k for k, v in required.items() if not v]

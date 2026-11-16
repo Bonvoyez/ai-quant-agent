@@ -32,11 +32,12 @@ class DummyTelegramService:
 
 
 @pytest.mark.asyncio
-async def test_snowball_runner_entry_and_trailing(monkeypatch):
+async def test_snowball_runner_entry_and_trailing(monkeypatch, tmp_path):
     monkeypatch.setenv("ROTATION_DRY_RUN", "0")
+    storage_file = str(tmp_path / "test_positions.json")
     toss = DummyTossService()
     tg = DummyTelegramService()
-    runner = BreakoutStrategyRunner(toss, tg, score_threshold=15.0, max_positions=1)
+    runner = BreakoutStrategyRunner(toss, tg, score_threshold=15.0, max_positions=1, storage_file=storage_file)
 
     candidate = {
         "ticker": "UPXI",

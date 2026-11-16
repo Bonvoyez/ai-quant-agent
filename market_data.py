@@ -5,7 +5,7 @@ import pandas as pd
 import logging
 from collections import defaultdict
 from datetime import datetime, time
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from zoneinfo import ZoneInfo
 from config import SECTOR_ETF_MAPPING
 
@@ -431,3 +431,72 @@ class MarketDataCollector:
 
         diversified.sort(key=_momentum_score, reverse=True)
         return diversified[:top_n]
+
+    @classmethod
+    async def get_breakout_candidates_premarket(cls, universe: List[str] = None) -> List[Dict[str, Any]]:
+        """
+        Pre-market & Open Breakout Feature Extractor:
+        Extracts real-time Gap, RVOL, ATR, and Bollinger Width for nanocap breakout filtering.
+        """
+        if universe is None:
+            universe = [
+                "UPXI", "NEGG", "QBTS", "RGTI", "RCAT", "BBAI", "SOUN", "ROOT", "CIFR",
+                "WOLF", "WKHS", "SPCE", "CAR", "AEHR", "ALT", "BYND", "INDI", "KROS",
+                "APLD", "CORZ", "CLSK", "ASTS", "RKLB", "LUNR", "RDW", "IONQ", "QUBT",
+                "MLGO", "TOP", "HKD", "HOLO", "LPA", "MNDR", "SMFL", "ZJYL", "AMPX",
+            ]
+
+        loop = asyncio.get_running_loop()
+
+        def _fetch_candidate_features_sync(ticker: str) -> Optional[Dict[str, Any]]:
+            try:
+                t = yf.Ticker(ticker)
+                hist = t.history(period="1mo", interval="1d")
+                if hist.empty or len(hist) < 15:
+                    return None
+
+                prev_close = float(hist["Close"].iloc[-2])
+                prev_open = float(hist["Open"].iloc[-2])
+                prev_vol = float(hist["Volume"].iloc[-2])
+                avg_vol = float(hist["Volume"].iloc[-20:].mean()) if len(hist) >= 20 else float(hist["Volume"].mean())
+
+                rvol_prev = (prev_vol / avg_vol) if avg_vol > 0 else 1.0
+
+                fast_info = getattr(t, "fast_info", {})
+                current_price = fast_info.get("last_price") or float(hist["Close"].iloc[-1])
+                open_price = fast_info.get("open") or current_price
+
+                gap_open_pct = ((open_price - prev_close) / prev_close) * 100.0 if prev_close > 0 else 0.0
+
+                high_low = hist["High"] - hist["Low"]
+                high_close = (hist["High"] - hist["Close"].shift()).abs()
+                low_close = (hist["Low"] - hist["Close"].shift()).abs()
+                tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+                atr = float(tr.rolling(14).mean().iloc[-1]) if len(tr) >= 14 else float(tr.mean())
+                atr_pct = (atr / prev_close) * 100.0 if prev_close > 0 else 5.0
+
+                closes = hist["Close"]
+                sma20 = float(closes.rolling(20).mean().iloc[-1]) if len(closes) >= 20 else float(closes.mean())
+                std20 = float(closes.rolling(20).std().iloc[-1]) if len(closes) >= 20 else float(closes.std())
+                bb_width = ((std20 * 4.0) / sma20) * 100.0 if sma20 > 0 else 30.0
+
+                fact_score = 0.50
+
+                return {
+                    "ticker": ticker,
+                    "gap_open_pct": gap_open_pct,
+                    "rvol_prev": rvol_prev,
+                    "atr_pct": atr_pct,
+                    "bb_width": bb_width,
+                    "fact_score": fact_score,
+                    "is_toxic_material": 0.0,
+                    "current_price": current_price,
+                    "open_price": open_price,
+                }
+            except Exception as e:
+                logger.debug(f"[Breakout Scanner] {ticker} fetch failed: {e}")
+                return None
+
+        tasks = [loop.run_in_executor(None, _fetch_candidate_features_sync, t) for t in universe]
+        results = await asyncio.gather(*tasks)
+        return [r for r in results if r is not None]

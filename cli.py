@@ -28,9 +28,9 @@ def parse_args(args=None):
 
     parser.add_argument(
         "--mode",
-        choices=["rotation", "paper", "live"],
+        choices=["rotation", "breakout", "paper", "live"],
         default=os.getenv("STRATEGY_MODE", "paper").lower(),
-        help="Operating strategy mode: 'rotation' (sector ETF momentum), 'paper' (simulation), or 'live' (real execution).",
+        help="Operating strategy mode: 'breakout' (nanocap snowball runner), 'rotation' (sector ETF momentum), 'paper' (simulation), or 'live' (real execution).",
     )
 
     parser.add_argument(
@@ -109,7 +109,12 @@ def main():
     args = parse_args()
 
     # Sync parsed CLI arguments into environment variables for underlying modules
-    os.environ["STRATEGY_MODE"] = args.mode
+    if args.mode in ("rotation", "breakout"):
+        os.environ["STRATEGY_MODE"] = args.mode
+    elif args.mode == "paper":
+        os.environ["STRATEGY_MODE"] = "breakout"
+        args.dry_run = True
+
     os.environ["ROTATION_DRY_RUN"] = "1" if args.dry_run else "0"
     os.environ["ROTATION_CAPITAL_CAP_USD"] = str(args.capital_cap)
     os.environ["DASHBOARD_HOST"] = args.dashboard_host

@@ -4,11 +4,12 @@ import logging
 import json
 import uuid
 from typing import Optional
+from broker import BaseBroker
 
 logger = logging.getLogger("StockReporter")
 
 
-class TossInvestService:
+class TossInvestService(BaseBroker):
     def __init__(self, session: aiohttp.ClientSession, client_id: str, client_secret: str, account_seq: str):
         self.session = session
         self.client_id = client_id
