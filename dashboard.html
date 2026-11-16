@@ -176,6 +176,15 @@
           </select>
         </div>
         <div>
+          <div class="kpi-label">AI INTELLIGENCE</div>
+          <select id="setAiMode" class="search" style="width:145px;font-weight:600;color:var(--pos);">
+            <option value="off">Off (Zero-Cost)</option>
+            <option value="lite">Lite (Quick Fact)</option>
+            <option value="standard">Standard (Audit)</option>
+            <option value="deep" selected>👑 Deep Pro (SEC Audit)</option>
+          </select>
+        </div>
+        <div>
           <div class="kpi-label">RISK MODE</div>
           <select id="setRiskMode" class="search" style="width:150px;">
             <option value="conservative">Conservative</option>
@@ -579,7 +588,8 @@
       document.getElementById("setMinConfidence").value = s.min_confidence ?? 0.65;
       document.getElementById("setMaxAtr").value = s.max_atr_pct ?? 5.0;
       document.getElementById("setDailyLossCut").value = s.max_daily_loss_pct ?? 3.0;
-      document.getElementById("setStrategyMode").value = s.strategy_mode || "rotation";
+      document.getElementById("setStrategyMode").value = s.strategy_mode || "breakout";
+      document.getElementById("setAiMode").value = s.ai_mode || "deep";
       document.getElementById("setRiskMode").value = s.risk_mode || "balanced";
       document.getElementById("setExcluded").value = (s.excluded_tickers || []).join(", ");
       if (STATE.loaded) render();
@@ -602,6 +612,7 @@
       max_atr_pct: parseFloat(document.getElementById("setMaxAtr").value),
       max_daily_loss_pct: parseFloat(document.getElementById("setDailyLossCut").value),
       strategy_mode: document.getElementById("setStrategyMode").value,
+      ai_mode: document.getElementById("setAiMode").value,
       risk_mode: document.getElementById("setRiskMode").value,
       excluded_tickers: document.getElementById("setExcluded").value
         .split(",").map((s) => s.trim()).filter(Boolean),

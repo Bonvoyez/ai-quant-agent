@@ -73,6 +73,8 @@ class BreakoutStrategyRunner:
         self,
         broker,
         telegram_service=None,
+        ai_client=None,
+        settings_manager=None,
         score_threshold: float = 15.0,
         stop_loss_pct: float = -3.0,
         trailing_step_pct: float = 2.0,
@@ -83,6 +85,8 @@ class BreakoutStrategyRunner:
         # Backward compatibility alias
         self.toss = broker
         self.telegram = telegram_service
+        self.ai = ai_client
+        self.settings = settings_manager
         self.score_threshold = score_threshold
         self.stop_loss_pct = stop_loss_pct
         self.trailing_step_pct = trailing_step_pct
@@ -119,13 +123,72 @@ class BreakoutStrategyRunner:
             ticker = feat.get("ticker", "UNKNOWN")
             if should_enter_breakout_trade(feat, threshold=self.score_threshold):
                 score = calculate_breakout_score(feat)
-                valid_candidates.append((score, ticker, feat))
+                valid_candidates.append({"score": score, "ticker": ticker, "feat": feat})
 
-        valid_candidates.sort(key=lambda x: x[0], reverse=True)
-        top_picks = valid_candidates[: self.max_positions]
+        valid_candidates.sort(key=lambda x: x["score"], reverse=True)
+        if not valid_candidates:
+            logger.info("ℹ️ [Breakout Strategy] No candidates passed mathematical threshold today.")
+            return []
+
+        user_settings = self.settings.load() if self.settings else {}
+        ai_mode = str(user_settings.get("ai_mode") or os.getenv("AI_MODE", "deep")).lower()
+        logger.info(f"🧠 [Breakout Strategy] Active AI Intelligence Mode: [{ai_mode.upper()}] (Candidates: {len(valid_candidates)})")
+
+        approved_candidates = []
+        # Multi-Tier AI Intelligence Pipeline
+        if ai_mode in ("standard", "deep") and self.ai and self.ai.is_configured:
+            audit_limit = 5 if ai_mode == "deep" else 2
+            audit_pool = valid_candidates[:audit_limit]
+            logger.info(f"🔍 [Deep Pro AI Audit] Performing live SEC EDGAR & catalyst audit on top {len(audit_pool)} candidate(s)...")
+
+            for item in audit_pool:
+                ticker = item["ticker"]
+                audit_res = await self.ai.deep_audit_candidate(ticker, item["feat"])
+                item["ai_audit"] = audit_res
+                item["ai_summary"] = audit_res.get("summary", "")
+
+                if audit_res.get("is_safe", True):
+                    logger.info(f"✅ [AI Audit Passed] {ticker} - Recommendation: APPROVED (Fact Score: {audit_res.get('fact_score', 0.5):.2f})")
+                    approved_candidates.append(item)
+                else:
+                    flags = ", ".join(audit_res.get("risk_flags", [])) or "Dilution/Offering alert"
+                    logger.warning(f"🚨 [AI Sentinel REJECT] {ticker} rejected! Toxic risk detected: {flags}. Bypassing trap.")
+
+            # If all audited candidates were rejected by AI, fallback or stop safely
+            if not approved_candidates and valid_candidates:
+                logger.warning("⚠️ All top audited candidates flagged as toxic by AI. Capital strictly protected from traps.")
+        elif ai_mode == "lite" and self.ai and self.ai.is_configured:
+            top_item = valid_candidates[0]
+            audit_res = await self.ai.deep_audit_candidate(top_item["ticker"], top_item["feat"])
+            top_item["ai_audit"] = audit_res
+            top_item["ai_summary"] = audit_res.get("summary", "")
+            if audit_res.get("is_safe", True):
+                approved_candidates.append(top_item)
+            else:
+                logger.warning(f"🚨 [AI Lite REJECT] {top_item['ticker']} flagged unsafe. Skipping.")
+        else:
+            # AI Off or unconfigured -> Pure quantitative mathematical rankings
+            approved_candidates = valid_candidates
+
+        top_picks = approved_candidates[: self.max_positions]
+        if not top_picks:
+            return []
+
+        # Send Telegram Morning Intelligence Briefing
+        if self.telegram and self.ai and ai_mode in ("standard", "deep") and self.ai.is_configured:
+            try:
+                top_item = top_picks[0]
+                runners_up = approved_candidates[1:3]
+                briefing = await self.ai.generate_morning_briefing(top_item, runners_up)
+                header = "👑 [AI QUANT INTELLIGENCE: DEEP PRO MORNING REPORT]\n"
+                await self.telegram.send_message(f"{header}{briefing}")
+            except Exception as tg_err:
+                logger.debug(f"Failed to send AI briefing: {tg_err}")
 
         entered_tickers = []
-        for score, ticker, feat in top_picks:
+        for pick in top_picks:
+            score = pick["score"]
+            ticker = pick["ticker"]
             if ticker in self.active_positions:
                 continue
 
@@ -169,12 +232,14 @@ class BreakoutStrategyRunner:
                 entered_tickers.append(ticker)
 
                 msg = (
-                    f"🚀 [Snowball Buy Executed]\n"
+                    f"🚀 [Snowball Entry Executed]\n"
                     f"• Ticker: {ticker}\n"
-                    f"• Score: {score:.1f}\n"
+                    f"• Formula Score: {score:.1f}\n"
+                    f"• AI Mode: {ai_mode.upper()}\n"
                     f"• Entry Price: ${current_price:.2f}\n"
-                    f"• Budget: ${budget:.2f}\n"
-                    f"• Stop: -3.0% / Trailing: -2.0% from peak"
+                    f"• Budget Allocated: ${budget:.2f} USD\n"
+                    f"• Hard Stop: ${current_price * (1.0 + self.stop_loss_pct / 100.0):.2f} ({self.stop_loss_pct:.1f}%)\n"
+                    f"• Dynamic Trailing: Peak -{self.trailing_step_pct:.1f}%"
                 )
                 logger.info(msg)
                 if self.telegram:

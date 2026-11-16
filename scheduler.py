@@ -548,7 +548,12 @@ class DailyScheduler:
         # [Mission-Critical Fault Tolerance & Crash Recovery]
         # 장중 또는 장외 언제든 봇이 재시작되더라도, 디스크에 기록된 활성 포지션을 복원하여
         # 실시간 손절/트레일링 익절 감시 태스크를 즉각 재가동합니다.
-        self.breakout_runner = BreakoutStrategyRunner(self.toss, self.telegram)
+        self.breakout_runner = BreakoutStrategyRunner(
+            self.toss,
+            self.telegram,
+            ai_client=self.ai,
+            settings_manager=self.settings,
+        )
         if self.breakout_runner.active_positions:
             active_symbols = list(self.breakout_runner.active_positions.keys())
             logger.info(

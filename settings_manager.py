@@ -12,6 +12,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "paused": False,
     "max_positions": 1,
     "strategy_mode": "breakout",  # rotation | breakout
+    "ai_mode": "deep",  # off | lite | standard | deep (Deep Pro)
     "max_budget_pct": 100,
     "min_confidence": 0.65,
     "max_atr_pct": 20.0,
@@ -22,6 +23,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
 
 VALID_RISK_MODES = {"conservative", "balanced", "aggressive"}
 VALID_STRATEGY_MODES = {"rotation", "breakout"}
+VALID_AI_MODES = {"off", "lite", "standard", "deep"}
 
 
 class SettingsManager:
@@ -66,7 +68,10 @@ class SettingsManager:
                 s[key] = default
 
         if s.get("strategy_mode") not in VALID_STRATEGY_MODES:
-            s["strategy_mode"] = "rotation"
+            s["strategy_mode"] = "breakout"
+
+        if s.get("ai_mode") not in VALID_AI_MODES:
+            s["ai_mode"] = "deep"
 
         if s.get("risk_mode") not in VALID_RISK_MODES:
             s["risk_mode"] = "balanced"

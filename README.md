@@ -20,6 +20,11 @@ An asynchronous, broker-agnostic quantitative trading and portfolio management p
   - Easily extensible to institutional/retail gateways (Interactive Brokers, Alpaca, FIX protocols) without altering trading logic.
 - **Closed-Form Momentum & Toxic Disclosure Filter**:
   Pre-market nanocap scoring engine evaluating opening gap, relative volume (RVOL), and ATR volatility, coupled with automated rejection of toxic corporate dilution (CB/toxic financing filings).
+- **Multi-Tier AI Intelligence Pipeline (Deep Pro Audit)**:
+  Configurable 4-tier LLM intelligence system (`off`, `lite`, `standard`, `deep`) powered by OpenAI-compatible reasoning models (e.g., `sonar-reasoning-pro` with real-time web search):
+  - `deep` (Deep Pro): Audits top candidates against real-time SEC EDGAR filings (8-K, S-3 dilution/warrant detection), generates 3-bullet Telegram intelligence briefings, monitors intraday breaking news, and conducts post-trade autopsies.
+  - `standard` / `lite`: Lightweight fact checking for cost-conscious users.
+  - `off`: 100% pure mathematical execution with zero API token cost.
 - **Asymmetric Risk Management & State Persistence**:
   Enforces a strict -3.0% hard stop-loss and a dynamic -2.0% trailing stop after profit expansion. Positions are atomically persisted to disk to guarantee crash recovery without position loss.
 - **US Calendar & Daylight Saving Time (DST) Awareness**:
