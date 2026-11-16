@@ -48,10 +48,16 @@ async def run_diagnostics():
 
     async with aiohttp.ClientSession() as session:
         # -------------------------------------------------------------
-        # 1. Market Data Feed
+        # 1. Market Data Feed & Calendar Subsystem
         # -------------------------------------------------------------
-        print(f"\n{BOLD}[1/6] 🌐 Network & Real-Time Market Feed{RESET}")
+        print(f"\n{BOLD}[1/6] 🌐 Network, Market Calendar & Real-Time Feed{RESET}")
         try:
+            from market_calendar import is_trading_day, NEW_YORK
+            now_ny = datetime.now(NEW_YORK)
+            tz_abbr = now_ny.strftime("%Z")  # EDT (Daylight Saving) or EST (Standard)
+            is_open_today, cal_status = is_trading_day(now_ny)
+            print_status("US Market Calendar & DST Engine", True, f"NYC Time: {now_ny.strftime('%Y-%m-%d %H:%M:%S')} {tz_abbr} | Status: {cal_status}")
+
             import yfinance as yf
             def _get_spy():
                 t = yf.Ticker("SPY")

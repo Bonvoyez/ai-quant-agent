@@ -24,6 +24,7 @@ from quant_rules import (
 )
 from rotation_strategy import run_daily_cycle as run_rotation_daily_cycle
 from breakout_strategy import BreakoutStrategyRunner
+from market_calendar import is_trading_day
 from utils import atomic_write
 
 logger = logging.getLogger("StockReporter")
@@ -555,17 +556,18 @@ class DailyScheduler:
                 now = datetime.now(KST)
                 now_ny = now.astimezone(NEW_YORK)
                 today_str = now.strftime("%Y-%m-%d")
-                is_weekday = now_ny.weekday() < 5
+                is_trading, market_status = is_trading_day(now_ny)
 
-                # [핵심 수정] 기존에는 `now.hour == TARGET_HOUR`로 "정확히 그 시(hour)
-                # 안"에서만 트리거가 걸려서, 프로세스가 그 시간대를 지나 재시작되면
-                # 그날은 영영 트리거를 놓쳤습니다. 이제 "목표 시각 이후 아무 때나"
-                # (당일 자정 전까지) 트리거되도록 완화하여, 재시작으로 인해 실행
-                # 창을 놓쳐도 그날 안에 캐치업해서 실행됩니다.
+                # [서머타임 및 공휴일 자동 대응]
+                # 1. 서머타임(DST): ZoneInfo("America/New_York") 기준으로 09:30을 계산하므로
+                #    한국 시각 기준 밤 10:30(서머타임)과 밤 11:30(겨울 표준시)을 시스템이 자동 보정합니다.
+                # 2. 미국 공휴일(Holidays): market_calendar를 통해 주말 및 공식 10대 휴장일(신정, MLK,
+                #    프레지던츠데이, 굿프라이데이, 메모리얼데이, 준틴스, 독립기념일, 노동절, 추수감사절,
+                #    크리스마스 등)을 자동 감지하여 휴장일에는 트리거하지 않고 안전하게 대기합니다.
                 trigger_dt = (now_ny.replace(hour=9, minute=30, second=0, microsecond=0)
                               + timedelta(minutes=ENTRY_DELAY_AFTER_OPEN_MINUTES))
                 should_trigger = (
-                    is_weekday
+                    is_trading
                     and now_ny >= trigger_dt
                     and last_run_date != today_str
                 )
