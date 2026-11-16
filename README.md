@@ -16,7 +16,7 @@ An asynchronous, broker-agnostic quantitative trading and portfolio management p
 - **Broker-Agnostic Pluggable Architecture**:
   Core trading strategies interact strictly with the abstract `BaseBroker` interface. Out of the box, it includes:
   - `MockBroker`: Zero-credential virtual execution environment for reproducible backtesting and paper simulation.
-  - `TossInvestService`: Production driver adapter for Toss Securities US Equities OpenAPI with OAuth2 token caching and rate-limit guardrails.
+  - `Live Broker Adapters`: Production driver adapters (e.g. Toss Securities US Equities OpenAPI adapter with OAuth2 token caching and rate-limit guardrails).
   - Easily extensible to institutional/retail gateways (Interactive Brokers, Alpaca, FIX protocols) without altering trading logic.
 - **Closed-Form Momentum & Toxic Disclosure Filter**:
   Pre-market nanocap scoring engine evaluating opening gap, relative volume (RVOL), and ATR volatility, coupled with automated rejection of toxic corporate dilution (CB/toxic financing filings).
@@ -54,7 +54,7 @@ An asynchronous, broker-agnostic quantitative trading and portfolio management p
  ┌───────┴───────┐         ┌───────┴───────┐         ┌───────┴───────┐
  │               │         │               │         │               │
  ▼               ▼         ▼               ▼         ▼               ▼
-[MockBroker]  [Toss Broker [OpenAI /      [FactChat   [Telegram]  [Mobile Web]
+[MockBroker]  [Live Broker [OpenAI /      [FactChat   [Telegram]  [Mobile Web]
 (Zero-cred     Adapter]     Perplexity /   / Custom    (Alerting)  (Caddy HTTPS
  sandbox)      (Live API)   Ollama]        Gateway]                Reverse Proxy)
 ```
@@ -83,7 +83,7 @@ An asynchronous, broker-agnostic quantitative trading and portfolio management p
 
 ### 4. Interactive Monitoring & Analytics Dashboard (`dashboard.html`)
 - **Real-Time Market Pulse**: Dynamic session status badge (REGULAR, PRE_MARKET, CLOSED, HOLIDAY) with live second-by-second countdown to open/close events.
-- **Account & 100M Goal Widget**: Real-time equity calculation in KRW and USD with visual progress toward the ₩100M snowball milestone.
+- **Account Capital & Sentinel Widget**: Real-time available buying power (USD & KRW) and live active position tracking with real-time price monitoring.
 - **Clean SVG Line Chart**: Zero-dependency minimalist vector equity curve with instant timeframe switching (Today, 1W, 1M, 1Y, All).
 - **Criteria Proximity Funnel**: Visualizes today's screening funnel and reveals the top near-miss stocks with exact miss reasons.
 
@@ -96,7 +96,7 @@ This system is built from the ground up with enterprise-grade defensive security
 1. **Zero External Telemetry & Zero Backdoors**:
    - 100% pure Python, open-source codebase without compiled binary blobs, obfuscation, or third-party phone-home tracking.
    - Outbound network requests are strictly confined to:
-     - Designated Broker API (`openapi-invest.tossinvest.com`)
+     - Designated Broker API (configured broker endpoint e.g., live broker OpenAPI gateway)
      - Designated LLM Gateway (`LLM_BASE_URL` in `.env`)
      - Telegram Alerts (`api.telegram.org`)
      - Public Market Quotes (`query1.finance.yahoo.com`)

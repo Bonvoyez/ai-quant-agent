@@ -3,6 +3,7 @@ import asyncio
 import os
 import aiohttp
 import logging
+import traceback
 from aiohttp import web
 from config import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
 from scheduler import DailyScheduler
@@ -59,7 +60,33 @@ async def main() -> None:
         await site.start()
         logger.info(f"📊 Dashboard Web Server running at http://{dashboard_host}:{dashboard_port} (HTTPS proxy recommended)")
 
-        await scheduler.run()
+        telegram = scheduler.telegram
+        try:
+            await scheduler.run()
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            logger.info("Stock Report Bot daemon stopped by user signal.")
+            try:
+                await telegram.send_message(
+                    "🛑 [AI-Quant-Agent Stopped]\n"
+                    "시스템 작동이 정상 종료되었습니다.\n"
+                    "(Trading daemon shut down cleanly by user signal)"
+                )
+            except Exception as tg_err:
+                logger.debug(f"Failed to send shutdown Telegram alert: {tg_err}")
+        except Exception as e:
+            tb_str = traceback.format_exc()
+            logger.exception(f"Fatal crash in trading daemon: {e}")
+            try:
+                alert = (
+                    f"🚨 [CRITICAL ALERT: Daemon Crashed]\n"
+                    f"시스템이 비정상 종료되었습니다!\n\n"
+                    f"• 에러 이유: {type(e).__name__}: {e}\n"
+                    f"• 상세 내역:\n{tb_str[-500:]}"
+                )
+                await telegram.send_message(alert)
+            except Exception as tg_err:
+                logger.debug(f"Failed to send crash Telegram alert: {tg_err}")
+            raise
 
 if __name__ == "__main__":
     try:

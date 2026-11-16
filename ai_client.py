@@ -1,14 +1,17 @@
 # ai_client.py
 import asyncio
+from datetime import datetime
 import json
 import logging
 import random
 import re
 from typing import Any, Dict, List, Optional, Tuple
 import aiohttp
+from zoneinfo import ZoneInfo
 from config import HTTP_TIMEOUT, MAX_RETRY
 
 logger = logging.getLogger("StockReporter")
+NEW_YORK = ZoneInfo("America/New_York")
 
 
 class AIClient:
@@ -17,6 +20,8 @@ class AIClient:
         self.base_url = ""
         self.api_key = ""
         self.model = ""
+        self._audit_cache: Dict[str, Dict[str, Any]] = {}
+        self._briefing_cache: Dict[str, str] = {}
 
     def configure(self, base_url: str, api_key: str, model: str):
         self.base_url = base_url.strip() if base_url else ""
@@ -111,6 +116,13 @@ class AIClient:
                 "risk_flags": [],
             }
 
+        # Token Conservation Cache: Never re-query the same ticker on the same day
+        today_date = datetime.now(NEW_YORK).strftime("%Y-%m-%d")
+        cache_key = f"{today_date}_{ticker}"
+        if cache_key in self._audit_cache:
+            logger.info(f"⚡ [AI Cache Hit] Reusing today's audit result for {ticker}. Conserving LLM tokens.")
+            return self._audit_cache[cache_key]
+
         system_instruction = (
             "You are an elite quantitative hedge fund risk officer and SEC auditor for US small-cap equities. "
             "Your job is to protect capital from toxic dilution, reverse splits, and pump-and-dump traps. "
@@ -144,13 +156,15 @@ Return ONLY this JSON structure:
             raw = await self.fetch_raw_analysis(system_instruction, user_prompt)
             data = self.parse_json_response(raw)
             is_safe = (data.get("recommendation") == "APPROVED") and not (data.get("dilution_risk") == "HIGH")
-            return {
+            audit_result = {
                 "is_safe": is_safe,
                 "recommendation": "APPROVED" if is_safe else "REJECTED",
                 "fact_score": float(data.get("fact_score", 0.5)),
                 "summary": data.get("summary", "Analysis completed."),
                 "risk_flags": data.get("risk_flags", []),
             }
+            self._audit_cache[cache_key] = audit_result
+            return audit_result
         except Exception as e:
             logger.warning(f"Deep audit failed for {ticker}: {e}. Falling back to neutral.")
             return {
@@ -167,6 +181,13 @@ Return ONLY this JSON structure:
         """Generates a high-conviction 3-bullet narrative briefing for Telegram."""
         if not self.is_configured:
             return f"📌 Top Candidate: {top_candidate.get('ticker')} (Score: {top_candidate.get('score', 0):.1f})"
+
+        today_date = datetime.now(NEW_YORK).strftime("%Y-%m-%d")
+        top_ticker = top_candidate.get("ticker", "UNKNOWN")
+        brief_key = f"{today_date}_{top_ticker}"
+        if brief_key in self._briefing_cache:
+            logger.info("⚡ [AI Cache Hit] Reusing today's morning briefing. Conserving LLM tokens.")
+            return self._briefing_cache[brief_key]
 
         system_instruction = "You are an executive trading desk strategist. Create a professional, punchy 3-bullet morning briefing."
         tickers_str = f"Top 1: {top_candidate.get('ticker')} (Score: {top_candidate.get('score', 0):.1f})"
@@ -185,7 +206,9 @@ Format strictly as 3 bullet points:
 • 🎯 Trade Plan:
 """
         try:
-            return await self.fetch_raw_analysis(system_instruction, user_prompt)
+            brief = await self.fetch_raw_analysis(system_instruction, user_prompt)
+            self._briefing_cache[brief_key] = brief
+            return brief
         except Exception:
             return f"🚀 Top Pick: {top_candidate.get('ticker')} | Score: {top_candidate.get('score', 0):.1f} | Gap: {top_candidate.get('gap_open_pct', 0):+.2f}%"
 

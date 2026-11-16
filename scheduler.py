@@ -542,6 +542,21 @@ class DailyScheduler:
 
         last_record = self.history.load_last_record()
         last_run_date = last_record.get("date") or None
+
+        # Check screening_history.json as well for breakout strategy
+        from pathlib import Path
+        screening_path = Path(__file__).parent / "data" / "screening_history.json"
+        if screening_path.exists():
+            try:
+                with open(screening_path, "r", encoding="utf-8") as sf:
+                    s_records = json.load(sf)
+                    if isinstance(s_records, list) and s_records:
+                        last_s_date = s_records[-1].get("date")
+                        if last_s_date and (not last_run_date or last_s_date > last_run_date):
+                            last_run_date = last_s_date
+            except Exception:
+                pass
+
         if last_run_date:
             logger.info(f"📂 Resumed session. Last recorded execution date: {last_run_date}")
 
@@ -560,6 +575,10 @@ class DailyScheduler:
                 f"🛡️ [Crash Recovery] Detected {len(active_symbols)} open breakout position(s) from disk: "
                 f"{', '.join(active_symbols)}. Resuming real-time intraday exit monitoring immediately."
             )
+            # If we are already holding open positions on startup, do not re-screen or re-audit today
+            now_ny_dt = datetime.now(NEW_YORK)
+            last_run_date = now_ny_dt.strftime("%Y-%m-%d")
+            logger.info(f"⚡ [Token Optimization] Active position held. Today's screening cycle ({last_run_date}) marked completed.")
             asyncio.create_task(self.breakout_runner.run_intraday_exit_loop())
 
         while True:
