@@ -80,6 +80,12 @@ def parse_args(args=None):
     )
 
     parser.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Run comprehensive end-to-end system health check across all 6 subsystems.",
+    )
+
+    parser.add_argument(
         "--version",
         action="version",
         version="ai-quant-agent 1.0.0",
@@ -125,6 +131,11 @@ def main():
         logger.info("🔧 Running connection diagnostics...")
         asyncio.run(run_tests())
         sys.exit(0)
+
+    if args.doctor:
+        from doctor import run_diagnostics
+        passed = asyncio.run(run_diagnostics())
+        sys.exit(0 if passed else 1)
 
     if args.dashboard_only:
         try:

@@ -102,13 +102,16 @@ DASHBOARD_PORT=8899
 ### 4. Running the Bot
 
 ```bash
-# Run CLI diagnostics and verify broker credentials
-python cli.py --test-connection
+# 1. Run Comprehensive System Doctor (Health check all 6 subsystems in 5s)
+python cli.py --doctor
 
-# Run in paper trading (dry-run simulation)
+# 2. Run in Paper Trading Mode (Zero credentials required, MockBroker simulation)
 python cli.py --mode paper --dry-run
 
-# Run full bot with web dashboard
+# 3. Run Live Trading with Toss Broker
+python cli.py --mode breakout --live-orders
+
+# 4. Run Full Bot with Web Dashboard
 python main.py
 ```
 
