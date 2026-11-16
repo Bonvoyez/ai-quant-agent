@@ -114,6 +114,27 @@ NANOCAP_CORE_UNIVERSE = list(dict.fromkeys(NANOCAP_CORE_UNIVERSE))
 
 class MarketDataCollector:
     @staticmethod
+    async def get_realtime_price(ticker: str) -> Optional[float]:
+        """Fetch live price for ticker via yfinance fast_info / 1m intraday bar."""
+        try:
+            loop = asyncio.get_running_loop()
+            def _fetch():
+                t = yf.Ticker(ticker)
+                fi = getattr(t, "fast_info", None)
+                if fi:
+                    price = getattr(fi, "last_price", None) or getattr(fi, "previous_close", None)
+                    if price and price > 0:
+                        return float(price)
+                hist = t.history(period="1d", interval="1m")
+                if not hist.empty and "Close" in hist:
+                    return float(hist["Close"].iloc[-1])
+                return None
+            return await loop.run_in_executor(None, _fetch)
+        except Exception as e:
+            logger.debug(f"Failed to fetch live price for {ticker}: {e}")
+            return None
+
+    @staticmethod
     async def get_market_regime() -> Dict[str, Any]:
         """Return a mechanical, end-of-day market risk gate.
 

@@ -47,18 +47,20 @@ class MockBroker(BaseBroker):
     def __init__(self, initial_cash_usd: float = 1000.0):
         self.cash = initial_cash_usd
         self.positions: Dict[str, float] = {}  # ticker -> qty
+        self.manual_mock_prices: Dict[str, float] = {}
         self.price_cache: Dict[str, float] = {}
 
     async def get_balance(self) -> float:
         return self.cash
 
     def set_mock_price(self, ticker: str, price: float):
+        self.manual_mock_prices[ticker] = price
         self.price_cache[ticker] = price
 
     async def get_realtime_price(self, ticker: str) -> Optional[float]:
-        if ticker in self.price_cache:
-            return self.price_cache[ticker]
-        # Fallback to yfinance if not manually mocked
+        if ticker in self.manual_mock_prices:
+            return self.manual_mock_prices[ticker]
+        # Fetch fresh live market price
         try:
             import yfinance as yf
             import asyncio

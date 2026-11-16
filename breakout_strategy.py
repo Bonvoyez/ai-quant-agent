@@ -34,6 +34,7 @@ class ActivePosition:
     entry_price: float
     highest_price: float
     entry_time: datetime
+    current_price: float = 0.0
     exit_manager: ExitManager = field(default_factory=ExitManager)
     status: str = "OPEN"
 
@@ -42,6 +43,7 @@ class ActivePosition:
             "ticker": self.ticker,
             "entry_price": self.entry_price,
             "highest_price": self.highest_price,
+            "current_price": self.current_price if self.current_price > 0 else self.entry_price,
             "entry_time": self.entry_time.isoformat(),
             "status": self.status,
             "stop_loss_pct": self.exit_manager.stop_loss_pct,
@@ -64,6 +66,7 @@ class ActivePosition:
             entry_price=float(data["entry_price"]),
             highest_price=float(data.get("highest_price", data["entry_price"])),
             entry_time=etime,
+            current_price=float(data.get("current_price", data.get("entry_price", 0.0))),
             exit_manager=mgr,
             status=data.get("status", "OPEN"),
         )
@@ -290,9 +293,10 @@ class BreakoutStrategyRunner:
                     if not current_price or current_price <= 0:
                         continue
 
+                    pos.current_price = current_price
                     if current_price > pos.highest_price:
                         pos.highest_price = current_price
-                        self._persist_positions()
+                    self._persist_positions()
 
                     action, ratio, reason = pos.exit_manager.evaluate_exit(
                         entry_price=pos.entry_price,

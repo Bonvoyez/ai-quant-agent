@@ -120,10 +120,10 @@ async def handle_summary(request: web.Request) -> web.Response:
                     from market_data import MarketDataCollector
                     curr_p = await MarketDataCollector.get_realtime_price(ticker)
                 if curr_p and curr_p > 0:
-                    if hasattr(pos, "current_price"):
-                        pos.current_price = curr_p
-                    elif isinstance(pos, dict):
+                    if isinstance(pos, dict):
                         pos["current_price"] = curr_p
+                    else:
+                        setattr(pos, "current_price", curr_p)
             except Exception as pe:
                 logger.debug(f"Failed to fetch live price for {ticker}: {pe}")
 
