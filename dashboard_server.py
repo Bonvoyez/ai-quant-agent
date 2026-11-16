@@ -106,7 +106,26 @@ async def handle_summary(request: web.Request) -> web.Response:
             for item in pos_data:
                 t = item.get("ticker")
                 if t:
-                    active_positions[t] = item
+                    active_positions[t] = dict(item)
+
+    # Fetch live current prices for active positions
+    broker = getattr(scheduler, "broker", None)
+    if active_positions:
+        for ticker, pos in list(active_positions.items()):
+            try:
+                curr_p = None
+                if broker:
+                    curr_p = await broker.get_realtime_price(ticker)
+                if not curr_p or curr_p <= 0:
+                    from market_data import MarketDataCollector
+                    curr_p = await MarketDataCollector.get_realtime_price(ticker)
+                if curr_p and curr_p > 0:
+                    if hasattr(pos, "current_price"):
+                        pos.current_price = curr_p
+                    elif isinstance(pos, dict):
+                        pos["current_price"] = curr_p
+            except Exception as pe:
+                logger.debug(f"Failed to fetch live price for {ticker}: {pe}")
 
     summary = analytics_manager.get_dashboard_summary(
         current_balance_usd=balance_usd,

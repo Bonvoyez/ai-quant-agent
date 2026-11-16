@@ -418,26 +418,48 @@
       watchStatus.textContent = `실시간 감시 중: ${p.ticker}`;
       watchStatus.style.color = C.pos;
 
+      const curRet = p.current_return_pct || 0;
+      const curColor = curRet >= 0 ? C.pos : C.neg;
+      const curSign = curRet >= 0 ? "+" : "";
+      const curPrice = (p.current_price && p.current_price > 0) ? p.current_price : p.entry_price;
+
       posBox.innerHTML = `
-        <div style="background:var(--panel-alt);border:1px solid var(--pos-dim);border-radius:6px;padding:12px;" class="mono">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="background:var(--panel-alt);border:1px solid var(--border-soft);border-radius:6px;padding:12px;" class="mono">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
             <div>
-              <span style="font-size:16px;font-weight:700;color:var(--text);">${escapeHtml(p.ticker)}</span>
-              <span class="badge badge-win" style="margin-left:6px;">BUY EXECUTED</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:18px;font-weight:700;color:var(--text);">${escapeHtml(p.ticker)}</span>
+                <span class="badge badge-win">BUY EXECUTED</span>
+              </div>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+                진입 매수가: <strong style="color:var(--text);">$${p.entry_price.toFixed(2)}</strong>
+              </div>
             </div>
             <div style="text-align:right;">
-              <span style="font-size:11px;color:var(--muted);">매수가: $${p.entry_price.toFixed(2)}</span>
+              <div style="font-size:18px;font-weight:700;color:${curColor};">
+                $${curPrice.toFixed(2)} <span style="font-size:13px;">(${curSign}${curRet.toFixed(2)}%)</span>
+              </div>
+              <div style="font-size:10px;color:var(--muted-dim);margin-top:2px;">
+                장중 최고가: $${p.highest_price.toFixed(2)} (+${(p.peak_return_pct || 0).toFixed(1)}%)
+              </div>
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-top:6px;">
-            <div style="background:var(--neg-dim);border:1px solid var(--neg);padding:6px 8px;border-radius:4px;">
-              <div style="color:var(--muted);font-size:9px;">하드 손절선 (-3.0%)</div>
-              <div style="color:var(--neg);font-weight:700;">$${p.stop_loss_price.toFixed(2)}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-top:8px;">
+            <div style="background:var(--neg-dim);border:1px solid var(--neg);padding:8px 10px;border-radius:4px;">
+              <div style="color:var(--muted);font-size:9px;">하드 칼손절선 (-3.0%)</div>
+              <div style="color:var(--neg);font-weight:700;font-size:13px;margin-top:2px;">$${p.stop_loss_price.toFixed(2)}</div>
             </div>
-            <div style="background:var(--accent-dim);border:1px solid var(--accent);padding:6px 8px;border-radius:4px;">
-              <div style="color:var(--muted);font-size:9px;">트레일링 익절선 (고점 -2.0%)</div>
-              <div style="color:var(--accent);font-weight:700;">$${p.trailing_exit_price.toFixed(2)}</div>
+            ${p.is_trailing_active ? `
+            <div style="background:var(--pos-dim);border:1px solid var(--pos);padding:8px 10px;border-radius:4px;">
+              <div style="color:var(--muted);font-size:9px;">트레일링 익절선 (고점 -2.0% 확보)</div>
+              <div style="color:var(--pos);font-weight:700;font-size:13px;margin-top:2px;">$${p.trailing_exit_price.toFixed(2)}</div>
             </div>
+            ` : `
+            <div style="background:var(--panel);border:1px solid var(--border);padding:8px 10px;border-radius:4px;">
+              <div style="color:var(--muted);font-size:9px;">트레일링 익절 감시</div>
+              <div style="color:var(--muted);font-size:11px;font-weight:600;margin-top:3px;">대기 중 (+10.0% 돌파 시 발동)</div>
+            </div>
+            `}
           </div>
         </div>
       `;

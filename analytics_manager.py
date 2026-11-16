@@ -210,20 +210,31 @@ class AnalyticsManager:
             for ticker, p in active_positions.items():
                 p_dict = p.to_dict() if hasattr(p, "to_dict") else dict(p)
                 entry_p = float(p_dict.get("entry_price", 0.0))
-                high_p = float(p_dict.get("highest_price", entry_p))
+                current_p = float(p_dict.get("current_price", entry_p))
+                high_p = float(p_dict.get("highest_price", max(entry_p, current_p)))
                 stop_pct = float(p_dict.get("stop_loss_pct", -3.0))
                 trail_pct = float(p_dict.get("trailing_step_pct", 2.0))
+                activation_gain = 10.0  # Trailing stop only activates once price surges >= +10.0%
+
+                current_ret = ((current_p - entry_p) / entry_p) * 100.0 if entry_p > 0 else 0.0
+                peak_ret = ((high_p - entry_p) / entry_p) * 100.0 if entry_p > 0 else 0.0
+                is_trailing_active = peak_ret >= activation_gain
+                trail_price = round(high_p * (1.0 - trail_pct / 100.0), 3) if is_trailing_active else None
 
                 stop_price = round(entry_p * (1.0 + stop_pct / 100.0), 3)
-                trail_price = round(high_p * (1.0 - trail_pct / 100.0), 3)
                 pos_list.append({
                     "ticker": ticker,
                     "entry_price": entry_p,
+                    "current_price": current_p,
+                    "current_return_pct": round(current_ret, 2),
                     "highest_price": high_p,
+                    "peak_return_pct": round(peak_ret, 2),
                     "stop_loss_price": stop_price,
-                    "trailing_exit_price": trail_price,
                     "stop_loss_pct": stop_pct,
+                    "is_trailing_active": is_trailing_active,
+                    "trailing_exit_price": trail_price,
                     "trailing_step_pct": trail_pct,
+                    "activation_gain_pct": activation_gain,
                     "entry_time": p_dict.get("entry_time", ""),
                 })
 
