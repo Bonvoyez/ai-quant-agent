@@ -92,7 +92,7 @@ class DailyScheduler:
 
         from broker import MockBroker
         if not toss_key and dry_run:
-            logger.info("🧪 [Scheduler] Toss 자격증명 부재 및 Dry-Run 감지 -> MockBroker 활성화")
+            logger.info("🧪 [Scheduler] Live broker credentials not detected with dry-run enabled -> Initialized MockBroker.")
             self.broker = MockBroker(initial_cash_usd=float(os.getenv("ROTATION_CAPITAL_CAP_USD", "1000") or 1000.0))
             self.toss = self.broker
         else:

@@ -1,8 +1,9 @@
 import pytest
 from breakout_strategy import BreakoutStrategyRunner
+from broker import BaseBroker
 
 
-class DummyTossService:
+class DummyBroker(BaseBroker):
     def __init__(self):
         self.balance = 500.0
         self.prices = {"UPXI": 5.0, "AAPL": 150.0}
@@ -14,13 +15,16 @@ class DummyTossService:
     async def get_realtime_price(self, ticker):
         return self.prices.get(ticker, 5.0)
 
-    async def buy_market_order(self, ticker, budget):
-        self.orders.append(("BUY", ticker, budget))
+    async def buy_market_order(self, ticker, budget_usd=0.0):
+        self.orders.append(("BUY", ticker, budget_usd))
         return True
 
     async def sell_market_order(self, ticker):
         self.orders.append(("SELL", ticker))
         return True
+
+    async def get_sellable_quantity(self, ticker: str) -> float:
+        return 100.0
 
 
 class DummyTelegramService:
@@ -35,9 +39,9 @@ class DummyTelegramService:
 async def test_snowball_runner_entry_and_trailing(monkeypatch, tmp_path):
     monkeypatch.setenv("ROTATION_DRY_RUN", "0")
     storage_file = str(tmp_path / "test_positions.json")
-    toss = DummyTossService()
+    broker = DummyBroker()
     tg = DummyTelegramService()
-    runner = BreakoutStrategyRunner(toss, tg, score_threshold=15.0, max_positions=1, storage_file=storage_file)
+    runner = BreakoutStrategyRunner(broker, tg, score_threshold=15.0, max_positions=1, storage_file=storage_file)
 
     candidate = {
         "ticker": "UPXI",
@@ -52,14 +56,14 @@ async def test_snowball_runner_entry_and_trailing(monkeypatch, tmp_path):
     entered = await runner.screen_and_enter([candidate])
     assert "UPXI" in entered
     assert "UPXI" in runner.active_positions
-    assert len(toss.orders) == 1
-    assert toss.orders[0][0] == "BUY"
+    assert len(broker.orders) == 1
+    assert broker.orders[0][0] == "BUY"
 
     pos = runner.active_positions["UPXI"]
     assert pos.entry_price == 5.0
 
     # 1. Price drops to -3.1% -> STOP LOSS
-    toss.prices["UPXI"] = 4.84
+    broker.prices["UPXI"] = 4.84
     action, ratio, reason = pos.exit_manager.evaluate_exit(
         entry_price=5.0,
         current_price=4.84,

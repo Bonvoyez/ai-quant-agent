@@ -2,37 +2,74 @@
 
 [![CI Pipeline](https://github.com/Bonvoyez/ai-quant-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Bonvoyez/ai-quant-agent/actions)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Architecture: Clean](https://img.shields.io/badge/architecture-broker--agnostic-informational.svg)](#system-architecture)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Testing: Pytest](https://img.shields.io/badge/pytest-passing-brightgreen.svg)](https://pytest.org)
 
-An asynchronous quantitative trading and execution bot for US equities. Built with Python (`asyncio`, `aiohttp`), deterministic risk rules, momentum filters, and live broker integration (Toss Securities OpenAPI).
+An asynchronous, broker-agnostic quantitative trading and portfolio management platform for US equities. Designed with **Clean Architecture** and **Dependency Inversion** principles, featuring closed-form mathematical momentum formulas, deterministic volatility filters, dynamic intraday trailing stop risk management, US market holiday & DST scheduling, and an offline mock execution engine.
 
 ---
 
-## Features
+## Key Highlights
 
-- **Breakout Screening & Trailing Stops**: Closed-form mathematical scoring for small-cap breakouts combined with intraday trailing stop-loss management (`breakout_strategy.py`, `exit_manager.py`).
-- **Deterministic Risk Rules**: ATR-based dynamic bounds, hard capital caps per ticker, and daily drawdown circuit breakers (`quant_rules.py`).
-- **Broker Connectivity**:
-  - **Toss Securities OpenAPI**: US equities market execution with automated OAuth2 token refresh and fractional/integer share fallback.
-- **Async Architecture**: Non-blocking network I/O, background schedule reconciler, and token-authenticated local web dashboard.
-- **Telegram Notifications**: Real-time alerts for orders, position updates, and trailing stops.
+- **Broker-Agnostic Pluggable Architecture**:
+  Core trading strategies interact strictly with the abstract `BaseBroker` interface. Out of the box, it includes:
+  - `MockBroker`: Zero-credential virtual execution environment for reproducible backtesting and paper simulation.
+  - `TossInvestService`: Production driver adapter for Toss Securities US Equities OpenAPI with OAuth2 token caching and rate-limit guardrails.
+  - Easily extensible to institutional/retail gateways (Interactive Brokers, Alpaca, FIX protocols) without altering trading logic.
+- **Closed-Form Momentum & Toxic Disclosure Filter**:
+  Pre-market nanocap scoring engine evaluating opening gap, relative volume (RVOL), and ATR volatility, coupled with automated rejection of toxic corporate dilution (CB/toxic financing filings).
+- **Asymmetric Risk Management & State Persistence**:
+  Enforces a strict -3.0% hard stop-loss and a dynamic -2.0% trailing stop after profit expansion. Positions are atomically persisted to disk to guarantee crash recovery without position loss.
+- **US Calendar & Daylight Saving Time (DST) Awareness**:
+  Built-in pure-Python market calendar calculating official NYSE/NASDAQ holidays (including Meeus/Butcher Easter algorithm for Good Friday) and automatic EST/EDT transitions via `zoneinfo.ZoneInfo("America/New_York")`.
+- **Decoupled Mobile Web Dashboard**:
+  Single Source of Truth (SSOT) architecture using atomic state files (`settings.json`, `breakout_positions.json`) decoupled from the execution loop, accessible via reverse proxy (Caddy / Nginx).
+
+---
+
+## System Architecture
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   AI-QUANT-AGENT CORE TRADING ENGINE                   │
+│                                                                        │
+│  • derived_formula.py    (Closed-form scoring: Gap 0-4%, RVOL, ATR)    │
+│  • exit_manager.py       (Deterministic risk: -3% stop, -2% trailing)  │
+│  • breakout_strategy.py  (Daily Top 1 runner with crash recovery)       │
+│  • market_calendar.py    (NYSE/NASDAQ 10 official holidays & DST engine)│
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │
+         ┌─────────────────────────┼─────────────────────────┐
+         ▼                         ▼                         ▼
+   [Broker Layer]            [AI Reasoning Layer]      [Telemetry & UI]
+   (BaseBroker Interface)    (OpenAI-Compatible Spec)  (Decoupled REST)
+         │                         │                         │
+ ┌───────┴───────┐         ┌───────┴───────┐         ┌───────┴───────┐
+ │               │         │               │         │               │
+ ▼               ▼         ▼               ▼         ▼               ▼
+[MockBroker]  [Toss Broker [OpenAI /      [FactChat   [Telegram]  [Mobile Web]
+(Zero-cred     Adapter]     Perplexity /   / Custom    (Alerting)  (Caddy HTTPS
+ sandbox)      (Live API)   Ollama]        Gateway]                Reverse Proxy)
+```
 
 ---
 
 ## Strategy Overview
 
-### 1. Small-Cap Breakout & Momentum Strategy
-- **Pre-Market Screening**: Scans liquid US small-caps before regular market hours using pre-trained closed-form momentum formulas (`derived_formula.py`).
-- **Entry Rules**: Requires minimum relative volume (RVOL), ATR threshold, and absence of toxic corporate actions (dilution/CB announcements).
-- **Exit Strategy**:
-  - Hard stop-loss at -3.0% from entry price.
-  - Dynamic trailing stop triggered once profit reaches +5.0%, trailing -1.5% from the intraday high.
+### 1. Nanocap Breakout & Momentum Strategy (`breakout_strategy.py`)
+- **Pre-Market Screening**: Identifies liquid US equities exhibiting clean volatility expansion (Gap: 0.0% to +4.0%, RVOL > 1.2, ATR >= 7.0%).
+- **Toxic Material Sieve**: Immediate disqualification upon detection of dilutive corporate events or convertible debt.
+- **Risk & Trade Management**:
+  - Capital allocation: Concentrated single-ticker daily position (`Daily Top 1`).
+  - Hard Stop-Loss: Immediate exit upon -3.0% drawdown from entry price.
+  - Dynamic Trailing Stop: Activates on profit surges, trailing -2.0% below the peak high price.
+  - State Persistence: Crash-resilient state serialization preventing orphaned positions upon process restarts.
 
-### 2. Sector ETF Rotation Strategy
-- Ranks major US sector ETFs based on multi-timeframe momentum and inverse volatility weighting.
-- Rebalances on schedule with turnover and max drawdown constraints.
+### 2. Sector ETF Momentum Rotation (`rotation_strategy.py`)
+- Multi-timeframe relative momentum ranking across 10 major US sector ETFs.
+- Inverse-volatility risk budgeting with scheduled rebalancing and turnover caps.
 
 ---
 
@@ -40,21 +77,30 @@ An asynchronous quantitative trading and execution bot for US equities. Built wi
 
 ```
 ai-quant-agent/
-├── .github/workflows/ci.yml   # GitHub Actions CI (Ruff + Pytest)
-├── tests/                     # Unit test suite
-├── breakout_strategy.py       # Breakout screening & trailing stop runner
+├── .github/workflows/ci.yml   # Automated CI Pipeline (Ruff + Pytest)
+├── tests/                     # Comprehensive unit test suite
+│   ├── test_breakout_strategy.py
+│   ├── test_derived_formula.py
+│   ├── test_exit_manager.py
+│   ├── test_market_calendar.py
+│   └── test_quant_rules.py
+├── broker.py                  # Abstract BaseBroker interface & MockBroker implementation
+├── toss_service.py            # Pluggable live Toss OpenAPI driver adapter
+├── breakout_strategy.py       # Nanocap breakout strategy & position manager
 ├── derived_formula.py         # Pure-Python mathematical breakout formula
-├── exit_manager.py            # Optimized trailing stop and stop-loss handler
-├── toss_service.py            # Toss Securities OpenAPI client
-├── market_data.py             # Price feed ingestion & technical indicators
-├── quant_rules.py             # ATR calculations, position sizing, and stops
-├── rotation_strategy.py       # Sector ETF momentum rotation
-├── scheduler.py               # Main trading loop and schedule manager
+├── exit_manager.py            # Hard stop-loss and trailing stop state machine
+├── market_calendar.py         # US market holiday & DST calculator (NYSE/NASDAQ)
+├── market_data.py             # Market quote ingestion and technical indicators
+├── quant_rules.py             # Volatility models and risk budgeting
+├── rotation_strategy.py       # Sector ETF momentum rotation strategy
+├── scheduler.py               # Main trading loop and execution orchestrator
+├── doctor.py                  # End-to-end 6-subsystem health diagnostic tool
 ├── cli.py                     # CLI entrypoint
-├── dashboard_server.py        # Token-secured dashboard backend
-├── dashboard.html             # Real-time monitoring UI
-├── telegram_service.py        # Telegram alerting module
-└── main.py                    # Application bootstrap
+├── dashboard_server.py        # Token-authenticated REST backend
+├── dashboard.html             # Responsive mobile/desktop monitoring UI
+├── telegram_service.py        # Telegram alerting and notification service
+├── ai_client.py               # OpenAI-compatible multi-LLM reasoning client
+└── main.py                    # Application bootstrap and daemon runner
 ```
 
 ---
@@ -63,7 +109,7 @@ ai-quant-agent/
 
 ### 1. Requirements
 - Python 3.10+
-- Linux (Oracle Cloud / Ubuntu / Debian) or macOS / Windows
+- Linux (Ubuntu, Debian, Oracle Linux), macOS, or Windows
 
 ### 2. Installation
 ```bash
@@ -77,59 +123,44 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configuration
-Copy `.env.example` to `.env` and fill in your credentials:
+Copy the template and configure your environment:
 ```bash
 cp .env.example .env
 ```
+*(Running with empty broker credentials will automatically trigger `MockBroker` paper trading mode, allowing instant offline evaluation without any external accounts).*
 
-Key environment variables:
-```ini
-# Brokerage Credentials (Toss Securities OpenAPI)
-TOSS_APP_KEY=your_toss_app_key
-TOSS_APP_SECRET=your_toss_app_secret
-TOSS_ACCOUNT_NO=your_account_seq_or_number
-
-# Telegram Notifications (Optional)
-TELEGRAM_TOKEN=your_bot_token
-TELEGRAM_CHAT_ID=your_chat_id
-
-# Local Dashboard
-DASHBOARD_TOKEN=choose_a_random_token
-DASHBOARD_HOST=127.0.0.1
-DASHBOARD_PORT=8899
-```
-
-### 4. Running the Bot
+### 4. Running the Platform
 
 ```bash
-# 1. Run Comprehensive System Doctor (Health check all 6 subsystems in 5s)
+# 1. End-to-End System Doctor (Live health check across all 6 subsystems in < 5s)
 python cli.py --doctor
 
-# 2. Run in Paper Trading Mode (Zero credentials required, MockBroker simulation)
+# 2. Paper Trading Simulation (Zero credentials required, 100% offline demonstration)
 python cli.py --mode paper --dry-run
 
-# 3. Run Live Trading with Toss Broker
+# 3. Live Breakout Strategy Execution
 python cli.py --mode breakout --live-orders
 
-# 4. Run Full Bot with Web Dashboard
+# 4. Run Full Autonomous Trading Daemon with Web Dashboard
 python main.py
 ```
 
 ---
 
-## Testing & Quality Checks
+## Testing & Quality Assurance
 
-Run the automated test suite and linter:
+All core modules are verified through automated unit tests and strict static analysis:
+
 ```bash
-# Unit tests
+# Run full unit test suite
 pytest -v tests/
 
-# Linter
+# Run Ruff linter
 ruff check .
 ```
 
 ---
 
-## Disclaimer
+## License
 
-This project is open-source software created for research and educational purposes. Trading financial markets carries risk of capital loss. Verify strategy logic with paper trading before using live capital.
+This project is licensed under the [MIT License](LICENSE).

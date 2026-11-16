@@ -3,7 +3,7 @@ breakout_strategy.py: Snowball Nanocap Runner Execution Module
 
 Coordinates:
 1. Daily Top 1 candidate selection using derived_formula.py
-2. Execution via BaseBroker (TossInvestService or MockBroker)
+2. Execution via pluggable BaseBroker (MockBroker, TossInvestService, etc.)
 3. Intraday trailing stop & tight stop-loss via ExitManager
 4. Atomic persistence to active_trades.json & breakout_positions.json for recovery
 """

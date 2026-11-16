@@ -12,7 +12,7 @@ license = { text = "MIT" }
 authors = [
     { name = "Juyoung Heo", email = "heo.juyoung0224@gmail.com" }
 ]
-keywords = ["trading", "quantitative-finance", "llm", "toss-securities", "asyncio"]
+keywords = ["trading", "quantitative-finance", "llm", "algorithmic-trading", "asyncio", "broker-agnostic"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
