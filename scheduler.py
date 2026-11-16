@@ -545,6 +545,18 @@ class DailyScheduler:
         if last_run_date:
             logger.info(f"📂 Resumed session. Last recorded execution date: {last_run_date}")
 
+        # [Mission-Critical Fault Tolerance & Crash Recovery]
+        # 장중 또는 장외 언제든 봇이 재시작되더라도, 디스크에 기록된 활성 포지션을 복원하여
+        # 실시간 손절/트레일링 익절 감시 태스크를 즉각 재가동합니다.
+        self.breakout_runner = BreakoutStrategyRunner(self.toss, self.telegram)
+        if self.breakout_runner.active_positions:
+            active_symbols = list(self.breakout_runner.active_positions.keys())
+            logger.info(
+                f"🛡️ [Crash Recovery] Detected {len(active_symbols)} open breakout position(s) from disk: "
+                f"{', '.join(active_symbols)}. Resuming real-time intraday exit monitoring immediately."
+            )
+            asyncio.create_task(self.breakout_runner.run_intraday_exit_loop())
+
         while True:
             try:
                 now = datetime.now(KST)
@@ -580,7 +592,7 @@ class DailyScheduler:
                     elif strategy_mode == "breakout":
                         try:
                             logger.info("🚀 [Breakout Strategy] Pre-market screening & autonomous execution triggered.")
-                            runner = BreakoutStrategyRunner(self.toss, self.telegram)
+                            runner = self.breakout_runner
                             # candidate features will be gathered via pre-market data
                             candidates = await self.market.get_breakout_candidates_premarket() if hasattr(self.market, "get_breakout_candidates_premarket") else []
                             if candidates:
