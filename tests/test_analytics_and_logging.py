@@ -116,15 +116,15 @@ def test_market_session_info():
     info_reg = get_market_session_info(reg_dt)
     assert info_reg["session"] == "REGULAR"
     assert info_reg["is_regular_open"] is True
-    assert "정규장" in info_reg["session_label"]
-    assert "정규장 마감까지" in info_reg["next_event"]
+    assert "REGULAR" in info_reg["session_label"]
+    assert "Close" in info_reg["next_event"]
 
     # Pre-market test: 06:30 AM NY
     pre_dt = datetime(2026, 11, 17, 6, 30, 0, tzinfo=NEW_YORK)
     info_pre = get_market_session_info(pre_dt)
     assert info_pre["session"] == "PRE_MARKET"
     assert info_pre["is_regular_open"] is False
-    assert "정규장 개장까지" in info_pre["next_event"]
+    assert "Market Open" in info_pre["next_event"]
 
     # Weekend test: Saturday
     sat_dt = datetime(2026, 11, 21, 12, 0, 0, tzinfo=NEW_YORK)

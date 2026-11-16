@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -34,7 +34,7 @@
 
   #app { padding: 18px; max-width: 1280px; margin: 0 auto; }
 
-  /* Market Pulse Banner */
+  /* Live Market Pulse Banner */
   .market-pulse-bar {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
     background: linear-gradient(90deg, #121820 0%, #151F2C 100%);
@@ -112,19 +112,19 @@
 </head>
 <body>
 <div id="app">
-  <!-- Live Market Status Header Bar -->
+  <!-- Live Market Status Header Bar with Real-time Clock -->
   <div class="market-pulse-bar" id="marketPulseBar">
     <div style="display:flex;align-items:center;gap:10px;">
       <span class="pulse-badge pulse-closed" id="pulseBadge">
         <span class="pulse-dot"></span>
-        <span id="pulseLabel">확인 중...</span>
+        <span id="pulseLabel">CONNECTING...</span>
       </span>
       <span class="mono" style="font-size:12px;font-weight:600;" id="pulseCountdown">--:--:--</span>
       <span style="font-size:11px;color:var(--muted);" id="pulseEventText"></span>
     </div>
     <div class="mono" style="font-size:11px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;">
-      <span id="pulseNyTime">NY: --:--:--</span>
-      <span id="pulseKstTime">KST: --:--:--</span>
+      <span id="pulseNyTime">NY: --:--:-- EST</span>
+      <span id="pulseKstTime">KST: --:--:-- KST</span>
     </div>
   </div>
 
@@ -133,34 +133,34 @@
       <span class="dot"></span>
       <div>
         <div class="title display">QUANT OPS · POSITION INTELLIGENCE</div>
-        <div class="subtitle" id="statusLine">Autonomous Trading System</div>
+        <div class="subtitle" id="statusLine">Autonomous US Momentum Trading Engine</div>
       </div>
     </div>
     <div class="controls">
-      <button class="btn" id="refreshBtn">↻ Refresh</button>
+      <button class="btn" id="refreshBtn">↻ REFRESH</button>
     </div>
   </div>
 
   <div id="banners"></div>
 
-  <!-- Real Account & Position Grid -->
+  <!-- Account Capital & Position Sentinel Grid -->
   <div class="account-grid">
     <div class="panel">
       <div class="panel-head">
-        <span class="panel-title">💼 내 계좌 자산 현황 (Account Assets)</span>
-        <span class="badge badge-pending" id="accModeBadge">확인 중</span>
+        <span class="panel-title">💼 Account Capital & Buying Power</span>
+        <span class="badge badge-pending" id="accModeBadge">INITIALIZING</span>
       </div>
       <div class="panel-body">
         <div style="display:flex;justify-content:space-between;align-items:flex-end;">
           <div>
-            <div class="kpi-label">주문 가능 외화 예수금 (Buying Power)</div>
+            <div class="kpi-label">Available Cash (Buying Power)</div>
             <div class="display" style="font-size:26px;font-weight:700;" id="accBalanceUsd">$0.00 USD</div>
-            <div class="mono" style="font-size:12px;color:var(--muted);margin-top:2px;" id="accBalanceKrw">약 ₩0 KRW</div>
+            <div class="mono" style="font-size:12px;color:var(--muted);margin-top:2px;" id="accBalanceKrw">≈ ₩0 KRW</div>
           </div>
           <div style="text-align:right;">
-            <div class="kpi-label">계좌 연동 상태</div>
-            <div class="mono" style="font-size:11px;color:var(--pos);" id="accConnectStatus">토스증권 OpenAPI 연결됨</div>
-            <div class="mono" style="font-size:10px;color:var(--muted-dim);margin-top:2px;">환율: 1 USD ≈ ₩1,360</div>
+            <div class="kpi-label">Broker Interface</div>
+            <div class="mono" style="font-size:11px;color:var(--pos);" id="accConnectStatus">Toss OpenAPI Connected</div>
+            <div class="mono" style="font-size:10px;color:var(--muted-dim);margin-top:2px;">Rate: 1 USD ≈ ₩1,360</div>
           </div>
         </div>
       </div>
@@ -168,12 +168,12 @@
 
     <div class="panel">
       <div class="panel-head">
-        <span class="panel-title">🎯 현재 포지션 실시간 감시</span>
-        <span class="mono" style="font-size:10px;color:var(--pos);" id="posWatchStatus">100% 현금 대기 중</span>
+        <span class="panel-title">🎯 Live Position Sentinel</span>
+        <span class="mono" style="font-size:10px;color:var(--pos);" id="posWatchStatus">100% Cash / Standby</span>
       </div>
       <div class="panel-body" id="activePositionBox">
         <div style="padding:14px 0;text-align:center;color:var(--muted);font-size:12px;">
-          현재 진입 포지션이 없습니다. (칼손절 -3% 및 고점대비 -2% 트레일링 대기)
+          No active positions. Standing by for Top 1 breakout signal (-3.0% Stop / -2.0% Trailing Exit ready).
         </div>
       </div>
     </div>
@@ -191,7 +191,7 @@
           <div class="kpi-label">PAUSED</div>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;height:30px;">
             <input type="checkbox" id="setPaused" style="width:15px;height:15px;accent-color:var(--accent);" />
-            <span style="font-size:12px;">신규 매수 중단</span>
+            <span style="font-size:12px;">Halt New Buys</span>
           </label>
         </div>
         <div>
@@ -220,7 +220,7 @@
         </div>
         <div style="flex:1;min-width:180px;">
           <div class="kpi-label">EXCLUDED TICKERS</div>
-          <input type="text" id="setExcluded" class="search" style="width:100%;" placeholder="예: MSTR, RGTI" />
+          <input type="text" id="setExcluded" class="search" style="width:100%;" placeholder="e.g. MSTR, RGTI" />
         </div>
         <button class="btn" id="saveSettingsBtn">Save Settings</button>
       </div>
@@ -231,24 +231,24 @@
   <div class="panel">
     <div class="panel-head">
       <div style="display:flex;align-items:center;gap:8px;">
-        <span class="panel-title">📈 실시간 자산 성장 곡선 (Realized Equity Curve)</span>
+        <span class="panel-title">📈 Realized Equity Curve</span>
       </div>
       <div style="display:flex;gap:4px;" id="timeframeButtons">
-        <button class="btn" data-tf="today">오늘</button>
-        <button class="btn" data-tf="1w">1주일</button>
-        <button class="btn" data-tf="1m">1개월</button>
-        <button class="btn" data-tf="1y">1년</button>
-        <button class="btn active" data-tf="all">전체</button>
+        <button class="btn" data-tf="today">TODAY</button>
+        <button class="btn" data-tf="1w">1W</button>
+        <button class="btn" data-tf="1m">1M</button>
+        <button class="btn" data-tf="1y">1Y</button>
+        <button class="btn active" data-tf="all">ALL</button>
       </div>
     </div>
     <div class="panel-body">
       <!-- Dynamic Performance KPIs -->
       <div class="kpis" id="dynamicKpis">
-        <div class="kpi"><div class="kpi-label">총 매매 횟수</div><div class="kpi-value" id="kpiTrades">0</div><div class="kpi-sub" id="kpiTradesSub">0승 0패</div></div>
-        <div class="kpi"><div class="kpi-label">승률 (Win Rate)</div><div class="kpi-value" id="kpiWinRate">—</div><div class="kpi-sub" id="kpiWinSub">정산 대기</div></div>
-        <div class="kpi"><div class="kpi-label">누적 수익률</div><div class="kpi-value" id="kpiReturn">0.00%</div><div class="kpi-sub">실현 손익 기준</div></div>
-        <div class="kpi"><div class="kpi-label">손익비 (Profit Factor)</div><div class="kpi-value" id="kpiPf">—</div><div class="kpi-sub" id="kpiPfSub">—</div></div>
-        <div class="kpi"><div class="kpi-label">최대 낙폭 (MDD)</div><div class="kpi-value" id="kpiMdd">0.0%</div><div class="kpi-sub">고점 대비 손실</div></div>
+        <div class="kpi"><div class="kpi-label">Total Trades</div><div class="kpi-value" id="kpiTrades">0</div><div class="kpi-sub" id="kpiTradesSub">0W 0L</div></div>
+        <div class="kpi"><div class="kpi-label">Win Rate</div><div class="kpi-value" id="kpiWinRate">—</div><div class="kpi-sub" id="kpiWinSub">No Closed Trades</div></div>
+        <div class="kpi"><div class="kpi-label">Cumulative Return</div><div class="kpi-value" id="kpiReturn">0.00%</div><div class="kpi-sub">Compounded Realized</div></div>
+        <div class="kpi"><div class="kpi-label">Profit Factor</div><div class="kpi-value" id="kpiPf">—</div><div class="kpi-sub" id="kpiPfSub">—</div></div>
+        <div class="kpi"><div class="kpi-label">Max Drawdown (MDD)</div><div class="kpi-value" id="kpiMdd">0.0%</div><div class="kpi-sub">Peak-to-Trough</div></div>
       </div>
       <!-- SVG Line Chart -->
       <div id="cleanLineChartContainer" style="width:100%;min-height:160px;"></div>
@@ -259,7 +259,7 @@
   <div class="grid-main">
     <div class="panel">
       <div class="panel-head">
-        <span class="panel-title">🎯 오늘의 필터링 & 아까운 탈락 후보 (문턱 이격도)</span>
+        <span class="panel-title">🎯 Daily Screening Funnel & Proximity Analytics</span>
         <span class="mono" style="font-size:10px;color:var(--muted);" id="screeningDate"></span>
       </div>
       <div class="panel-body">
@@ -269,22 +269,22 @@
       </div>
     </div>
 
-    <!-- AI Sentinel Status Card -->
+    <!-- AI Sentinel Intelligence Card -->
     <div class="panel">
       <div class="panel-head">
-        <span class="panel-title">🧠 AI Sentinel 실시간 감시 상태</span>
+        <span class="panel-title">🧠 AI Sentinel Intelligence</span>
       </div>
       <div class="panel-body">
         <div style="font-size:12px;line-height:1.6;color:var(--muted);margin-bottom:14px;">
-          Deep Pro AI가 SEC EDGAR 실시간 공시(S-3 유상증자, 워런트 전환 등)를 감사하여 독성 지뢰를 사전 차단합니다.
+          Deep Pro AI conducts real-time SEC EDGAR audits (Form S-3 shelf offerings, warrants, toxic dilution) to protect capital from traps.
         </div>
         <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--panel-alt);border-radius:4px;margin-bottom:8px;" class="mono">
-          <span style="color:var(--muted);">현재 AI 상태</span>
+          <span style="color:var(--muted);">Intelligence Pipeline</span>
           <span style="font-weight:600;color:var(--pos);">👑 Deep Pro (Active)</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--panel-alt);border-radius:4px;" class="mono">
-          <span style="color:var(--muted);">누적 차단된 유증 지뢰</span>
-          <span style="font-weight:600;color:var(--accent);" id="aiProofTraps">0건 (안전)</span>
+          <span style="color:var(--muted);">Toxic Traps Deflected</span>
+          <span style="font-weight:600;color:var(--accent);" id="aiProofTraps">0 Deflected (Safe)</span>
         </div>
       </div>
     </div>
@@ -314,6 +314,12 @@
     timeframe: "all",
   };
 
+  // Real-time 1-Second Clock State
+  let marketCountdownSec = 0;
+  let marketSessionCode = "CLOSED";
+  let marketSessionLabel = "MARKET CLOSED";
+  let marketNextEventText = "Time to Pre-Market:";
+
   function escapeHtml(str) {
     if (str === null || str === undefined) return "";
     return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -325,14 +331,35 @@
     return sign + v.toFixed(digits) + "%";
   }
 
+  // --- Smooth 1-Second Clock Engine ---
+  function tickClock() {
+    if (marketCountdownSec > 0) {
+      marketCountdownSec--;
+    }
+    const h = String(Math.floor(marketCountdownSec / 3600)).padStart(2, "0");
+    const m = String(Math.floor((marketCountdownSec % 3600) / 60)).padStart(2, "0");
+    const s = String(marketCountdownSec % 60).padStart(2, "0");
+    document.getElementById("pulseCountdown").textContent = `${h}:${m}:${s}`;
+
+    // Live NY and KST clocks
+    const now = new Date();
+    const nyTimeStr = now.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const kstTimeStr = now.toLocaleTimeString("en-US", { timeZone: "Asia/Seoul", hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById("pulseNyTime").textContent = `NY: ${nyTimeStr} EST`;
+    document.getElementById("pulseKstTime").textContent = `KST: ${kstTimeStr} KST`;
+  }
+
+  // Ticks every 1,000 milliseconds
+  setInterval(tickClock, 1000);
+
   function renderCleanLineChart(points, containerId) {
     const el = document.getElementById(containerId);
     if (!el) return;
     if (!points || points.length === 0) {
       el.innerHTML = `
         <div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:12px;">
-          아직 체결/정산된 실시간 매매 기록이 없습니다.<br>
-          <span style="font-size:11px;color:var(--muted-dim);">(미국 정규장이 열리고 매매가 집행되면 실시간 누적 수익률 곡선이 기록됩니다)</span>
+          No closed trade records yet.<br>
+          <span style="font-size:11px;color:var(--muted-dim);">(Equity trajectory will record live as trades are executed and closed in US regular market)</span>
         </div>
       `;
       return;
@@ -381,32 +408,32 @@
 
   function updateMarketPulse(m) {
     if (!m) return;
+    marketCountdownSec = m.seconds_to_next || 0;
+    marketSessionCode = m.session;
+    marketSessionLabel = m.session_label || m.session;
+    marketNextEventText = m.next_event || "";
+
     const badge = document.getElementById("pulseBadge");
     const label = document.getElementById("pulseLabel");
-    const cd = document.getElementById("pulseCountdown");
     const evText = document.getElementById("pulseEventText");
-    const nyTime = document.getElementById("pulseNyTime");
-    const kstTime = document.getElementById("pulseKstTime");
 
     badge.className = "pulse-badge " + (m.session === "REGULAR" ? "pulse-reg" : m.session === "PRE_MARKET" ? "pulse-pre" : "pulse-closed");
-    label.textContent = m.session_label || m.session;
-    cd.textContent = m.countdown || "--:--:--";
-    evText.textContent = m.next_event || "";
-    nyTime.textContent = m.ny_time || "";
-    kstTime.textContent = m.kst_time || "";
+    label.textContent = marketSessionLabel;
+    evText.textContent = marketNextEventText;
+    tickClock();
   }
 
   function updateAccountBox(acc) {
     if (!acc) return;
     document.getElementById("accBalanceUsd").textContent = `$${acc.balance_usd.toFixed(2)} USD`;
-    document.getElementById("accBalanceKrw").textContent = `약 ₩${acc.balance_krw.toLocaleString('ko-KR')} KRW`;
+    document.getElementById("accBalanceKrw").textContent = `≈ ₩${acc.balance_krw.toLocaleString('en-US')} KRW`;
 
     const modeBadge = document.getElementById("accModeBadge");
     if (acc.is_dry_run) {
-      modeBadge.textContent = "가상매매 (DRY-RUN)";
+      modeBadge.textContent = "SIMULATION (DRY-RUN)";
       modeBadge.className = "badge badge-pending";
     } else {
-      modeBadge.textContent = "실계좌 주문 (LIVE)";
+      modeBadge.textContent = "LIVE TRADING (TOSS API)";
       modeBadge.className = "badge badge-win";
     }
 
@@ -415,7 +442,7 @@
 
     if (acc.has_active_position && acc.active_positions.length > 0) {
       const p = acc.active_positions[0];
-      watchStatus.textContent = `실시간 감시 중: ${p.ticker}`;
+      watchStatus.textContent = `Monitoring: ${p.ticker}`;
       watchStatus.style.color = C.pos;
 
       const curRet = p.current_return_pct || 0;
@@ -432,7 +459,7 @@
                 <span class="badge badge-win">BUY EXECUTED</span>
               </div>
               <div style="font-size:11px;color:var(--muted);margin-top:3px;">
-                진입 매수가: <strong style="color:var(--text);">$${p.entry_price.toFixed(2)}</strong>
+                Entry Price: <strong style="color:var(--text);">$${p.entry_price.toFixed(2)}</strong>
               </div>
             </div>
             <div style="text-align:right;">
@@ -440,35 +467,35 @@
                 $${curPrice.toFixed(2)} <span style="font-size:13px;">(${curSign}${curRet.toFixed(2)}%)</span>
               </div>
               <div style="font-size:10px;color:var(--muted-dim);margin-top:2px;">
-                장중 최고가: $${p.highest_price.toFixed(2)} (+${(p.peak_return_pct || 0).toFixed(1)}%)
+                Session Peak: $${p.highest_price.toFixed(2)} (+${(p.peak_return_pct || 0).toFixed(1)}%)
               </div>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-top:8px;">
             <div style="background:var(--neg-dim);border:1px solid var(--neg);padding:8px 10px;border-radius:4px;">
-              <div style="color:var(--muted);font-size:9px;">하드 칼손절선 (-3.0%)</div>
+              <div style="color:var(--muted);font-size:9px;">Hard Stop-Loss (-3.0%)</div>
               <div style="color:var(--neg);font-weight:700;font-size:13px;margin-top:2px;">$${p.stop_loss_price.toFixed(2)}</div>
             </div>
             ${p.is_trailing_active ? `
             <div style="background:var(--pos-dim);border:1px solid var(--pos);padding:8px 10px;border-radius:4px;">
-              <div style="color:var(--muted);font-size:9px;">트레일링 익절선 (고점 -2.0% 확보)</div>
+              <div style="color:var(--muted);font-size:9px;">Trailing Stop (Peak -2.0% Lock-in)</div>
               <div style="color:var(--pos);font-weight:700;font-size:13px;margin-top:2px;">$${p.trailing_exit_price.toFixed(2)}</div>
             </div>
             ` : `
             <div style="background:var(--panel);border:1px solid var(--border);padding:8px 10px;border-radius:4px;">
-              <div style="color:var(--muted);font-size:9px;">트레일링 익절 감시</div>
-              <div style="color:var(--muted);font-size:11px;font-weight:600;margin-top:3px;">대기 중 (+10.0% 돌파 시 발동)</div>
+              <div style="color:var(--muted);font-size:9px;">Trailing Exit Sentinel</div>
+              <div style="color:var(--muted);font-size:11px;font-weight:600;margin-top:3px;">Standing by (Arms at +10.0%)</div>
             </div>
             `}
           </div>
         </div>
       `;
     } else {
-      watchStatus.textContent = "100% 현금 대기 중";
+      watchStatus.textContent = "100% Cash / Standby";
       watchStatus.style.color = C.muted;
       posBox.innerHTML = `
         <div style="padding:14px 0;text-align:center;color:var(--muted);font-size:12px;">
-          현재 진입 포지션이 없습니다. (조건 만족 시 Top 1 단일 몰빵 자동 진입 대기)
+          No active positions. (Standing by for Top 1 breakout signal)
         </div>
       `;
     }
@@ -479,11 +506,11 @@
     const dateEl = document.getElementById("screeningDate");
 
     if (!screening) {
-      dateEl.textContent = "금일 스캔 대기 중";
+      dateEl.textContent = "Awaiting Pre-Market Scan";
       container.innerHTML = `
         <div style="padding:32px 16px;text-align:center;color:var(--muted);font-size:12px;">
-          오늘 장전 스크리닝 대기 중입니다.<br>
-          <span style="font-size:11px;color:var(--muted-dim);margin-top:4px;display:inline-block;">(미국 정규장 개장 30분 전 120개 핵심 나노캡 유니버스를 고속 스캔합니다)</span>
+          Awaiting today's pre-market screening.<br>
+          <span style="font-size:11px;color:var(--muted-dim);margin-top:4px;display:inline-block;">(Autonomous vectorized batch scanner triggers 30 min prior to US market open across 120 nanocap runners)</span>
         </div>
       `;
       return;
@@ -492,7 +519,7 @@
     dateEl.textContent = `${screening.date} (AI: ${screening.ai_mode.toUpperCase()})`;
     const nearMisses = screening.near_misses || [];
     if (nearMisses.length === 0) {
-      container.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:20px 0;text-align:center;">오늘 아깝게 탈락한 종목이 없습니다.</div>`;
+      container.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:20px 0;text-align:center;">No near-miss candidates recorded today.</div>`;
       return;
     }
 
@@ -502,7 +529,7 @@
       const badgeCls = isWinner ? "badge-win" : (isTrap ? "badge-ai-reject" : "badge-near-miss");
       const badgeTxt = isWinner ? "TOP 1 SELECTED" : (isTrap ? "AI TRAP BLOCKED" : "NEAR MISS");
 
-      const reasons = item.miss_reasons && item.miss_reasons.length ? item.miss_reasons.join(" · ") : "기준 충족";
+      const reasons = item.miss_reasons && item.miss_reasons.length ? item.miss_reasons.join(" · ") : "Threshold Met";
       const fillColor = isWinner ? C.pos : (isTrap ? C.neg : C.accent);
 
       return `
@@ -513,7 +540,7 @@
           </div>
           <div style="flex:1;min-width:180px;">
             <div style="display:flex;justify-content:space-between;font-size:10px;" class="mono">
-              <span style="color:var(--muted);">기준 만족도</span>
+              <span style="color:var(--muted);">Criteria Match</span>
               <span style="font-weight:600;color:${fillColor};">${item.proximity_score.toFixed(1)}%</span>
             </div>
             <div class="prox-meter">
@@ -532,19 +559,19 @@
     if (!stats) return;
     const cnt = stats.trades_count || 0;
     document.getElementById("kpiTrades").textContent = cnt;
-    document.getElementById("kpiTradesSub").textContent = `${stats.wins || 0}승 ${stats.losses || 0}패`;
+    document.getElementById("kpiTradesSub").textContent = `${stats.wins || 0}W ${stats.losses || 0}L`;
 
     const wrEl = document.getElementById("kpiWinRate");
     wrEl.textContent = cnt > 0 ? `${(stats.win_rate_pct || 0).toFixed(1)}%` : "—";
     wrEl.className = "kpi-value " + (cnt > 0 && stats.win_rate_pct >= 50 ? "pos" : "neg");
-    document.getElementById("kpiWinSub").textContent = cnt > 0 ? `평균 +${(stats.avg_win_pct || 0).toFixed(1)}%` : "정산 대기";
+    document.getElementById("kpiWinSub").textContent = cnt > 0 ? `Avg Win: +${(stats.avg_win_pct || 0).toFixed(1)}%` : "No Closed Trades";
 
     const retEl = document.getElementById("kpiReturn");
     retEl.textContent = fmtPct(stats.cum_return_pct);
     retEl.className = "kpi-value " + ((stats.cum_return_pct || 0) >= 0 ? "pos" : "neg");
 
     document.getElementById("kpiPf").textContent = cnt > 0 ? (stats.profit_factor || 0).toFixed(2) : "—";
-    document.getElementById("kpiPfSub").textContent = cnt > 0 ? `손익비 ${(stats.profit_factor || 0) >= 2.0 ? '최상급' : '보통'}` : "—";
+    document.getElementById("kpiPfSub").textContent = cnt > 0 ? `PF: ${(stats.profit_factor || 0) >= 2.0 ? 'Optimal' : 'Standard'}` : "—";
 
     document.getElementById("kpiMdd").textContent = `-${(stats.max_drawdown_pct || 0).toFixed(1)}%`;
   }
@@ -554,7 +581,7 @@
     try {
       const res = await fetch(`/api/summary?token=${encodeURIComponent(TOKEN)}&timeframe=${encodeURIComponent(timeframe)}`);
       if (res.status === 401) {
-        document.getElementById("statusLine").textContent = "인증 실패: DASHBOARD_TOKEN 확인 필요";
+        document.getElementById("statusLine").textContent = "Authentication Failed: Check DASHBOARD_TOKEN";
         return;
       }
       const data = await res.json();
@@ -569,12 +596,12 @@
 
       if (data.ai_proof) {
         const trapCount = data.ai_proof.traps_blocked || 0;
-        document.getElementById("aiProofTraps").textContent = `${trapCount}건 (${trapCount === 0 ? "안전" : "차단 완료"})`;
+        document.getElementById("aiProofTraps").textContent = `${trapCount} Deflected (${trapCount === 0 ? "Safe" : "Deflected"})`;
       }
 
-      document.getElementById("statusLine").textContent = `정상 연결됨 · 마지막 갱신 ${new Date().toLocaleTimeString('ko-KR')}`;
+      document.getElementById("statusLine").textContent = `Connected · Synced ${new Date().toLocaleTimeString('en-US', { hour12: false })}`;
     } catch (e) {
-      document.getElementById("statusLine").textContent = "연결 오류: " + e.message;
+      document.getElementById("statusLine").textContent = "Connection Error: " + e.message;
     }
   }
 
@@ -617,20 +644,20 @@
       ai_mode: document.getElementById("setAiMode").value,
       excluded_tickers: document.getElementById("setExcluded").value.split(",").map(s => s.trim()).filter(Boolean),
     };
-    statusEl.textContent = "저장 중...";
+    statusEl.textContent = "Saving...";
     try {
       const res = await fetch("/api/settings?token=" + encodeURIComponent(TOKEN), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.status === 401) { statusEl.textContent = "인증 실패"; return; }
+      if (res.status === 401) { statusEl.textContent = "Auth Failed"; return; }
       const saved = await res.json();
       STATE.settings = saved;
-      statusEl.textContent = "저장됨 · 다음 사이클 반영";
+      statusEl.textContent = "Saved · Active next cycle";
       setTimeout(() => { statusEl.textContent = ""; }, 3000);
     } catch (e) {
-      statusEl.textContent = "저장 실패: " + e.message;
+      statusEl.textContent = "Save Failed: " + e.message;
     }
   }
 

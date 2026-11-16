@@ -212,13 +212,13 @@ def get_market_session_info(dt: Optional[datetime] = None) -> Dict[str, Any]:
 
         is_hol, hol_name = is_us_market_holiday(today_ny)
         code = "HOLIDAY" if is_hol else "WEEKEND"
-        label = f"휴장일 ({hol_name})" if is_hol else f"주말 ({status_msg})"
+        label = f"MARKET HOLIDAY ({hol_name})" if is_hol else f"WEEKEND ({status_msg})"
 
         return {
             "session": code,
             "session_label": label,
             "is_regular_open": False,
-            "next_event": "정규장 개장까지",
+            "next_event": "Time to Market Open:",
             "seconds_to_next": diff_sec,
             "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
             "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),
@@ -237,9 +237,9 @@ def get_market_session_info(dt: Optional[datetime] = None) -> Dict[str, Any]:
         mins, secs = divmod(rem, 60)
         return {
             "session": "CLOSED",
-            "session_label": "개장 전 대기",
+            "session_label": "MARKET CLOSED (Overnight)",
             "is_regular_open": False,
-            "next_event": "프리마켓 개장까지",
+            "next_event": "Time to Pre-Market:",
             "seconds_to_next": diff_sec,
             "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
             "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),
@@ -251,9 +251,9 @@ def get_market_session_info(dt: Optional[datetime] = None) -> Dict[str, Any]:
         mins, secs = divmod(rem, 60)
         return {
             "session": "PRE_MARKET",
-            "session_label": "프리마켓 진행 중",
+            "session_label": "PRE-MARKET ACTIVE",
             "is_regular_open": False,
-            "next_event": "정규장 개장까지",
+            "next_event": "Time to Market Open:",
             "seconds_to_next": diff_sec,
             "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
             "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),
@@ -265,9 +265,9 @@ def get_market_session_info(dt: Optional[datetime] = None) -> Dict[str, Any]:
         mins, secs = divmod(rem, 60)
         return {
             "session": "REGULAR",
-            "session_label": "정규장 진행 중",
+            "session_label": "REGULAR MARKET OPEN",
             "is_regular_open": True,
-            "next_event": "정규장 마감까지",
+            "next_event": "Time to Market Close:",
             "seconds_to_next": diff_sec,
             "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
             "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),
@@ -281,9 +281,9 @@ def get_market_session_info(dt: Optional[datetime] = None) -> Dict[str, Any]:
         mins, secs = divmod(rem, 60)
         return {
             "session": "AFTER_HOURS",
-            "session_label": "애프터마켓 진행 중",
+            "session_label": "AFTER-HOURS ACTIVE",
             "is_regular_open": False,
-            "next_event": "익일 프리마켓까지",
+            "next_event": "Time to Next Pre-Market:",
             "seconds_to_next": diff_sec,
             "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
             "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),
@@ -297,9 +297,9 @@ def get_market_session_info(dt: Optional[datetime] = None) -> Dict[str, Any]:
         mins, secs = divmod(rem, 60)
         return {
             "session": "CLOSED",
-            "session_label": "정규장 및 애프터마켓 마감",
+            "session_label": "MARKET CLOSED",
             "is_regular_open": False,
-            "next_event": "익일 프리마켓까지",
+            "next_event": "Time to Next Pre-Market:",
             "seconds_to_next": diff_sec,
             "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
             "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),

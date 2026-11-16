@@ -77,7 +77,7 @@ An asynchronous, broker-agnostic quantitative trading and portfolio management p
 - Inverse-volatility risk budgeting with scheduled rebalancing and turnover caps.
 
 ### 3. Local Machine Learning & Counterfactual Logging (`trade_logger.py`)
-- **Counterfactual Mining (대조군 학습)**: Logs not only executed positions but also near-miss candidates (-20% to -30% threshold runners-up) and AI-rejected toxic traps.
+- **Counterfactual Mining**: Logs not only executed positions but also near-miss candidates (-20% to -30% threshold runners-up) and AI-rejected toxic traps.
 - **Offline ML-Ready Datasets**: Atomically written to `data/training_dataset.parquet` and `data/training_dataset.jsonl` for offline Windows PC model fine-tuning (LightGBM, XGBoost, LoRA).
 - **Proximity Analytics**: Measures exact metric-by-metric distance to the Gold Standard breakout threshold.
 
