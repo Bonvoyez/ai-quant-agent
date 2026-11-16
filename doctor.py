@@ -171,12 +171,19 @@ async def run_diagnostics():
                 )
                 # Live API Call 1: Account list & token check
                 accounts = await toss.list_accounts()
+                resolved_seq = await toss._resolve_account_seq()
+                if resolved_seq:
+                    toss.account_seq = resolved_seq
                 token_ok = bool(toss.token)
                 print_status("Toss OAuth2 Token & Account Check", token_ok, f"{len(accounts)} accounts found")
+
+                await asyncio.sleep(0.5)
 
                 # Live API Call 2: Real Buying Power query
                 balance = await toss.get_balance()
                 print_status("Toss Live Buying Power (USD)", True, f"${balance:.2f} available")
+
+                await asyncio.sleep(0.5)
 
                 # Live API Call 3: Realtime quote query via Toss OpenAPI
                 aapl_price = await toss.get_realtime_price("AAPL")

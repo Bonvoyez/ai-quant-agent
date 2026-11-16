@@ -22,6 +22,7 @@ class TossInvestService(BaseBroker):
         # 헤더에 쓸 accountSeq는 최초 요청 시 서버에 물어봐서 자동으로 알아냅니다.
         self._account_hint = str(account_seq or "").strip()
         self.account_seq = None  # 실제 헤더에 사용할 값 (아래에서 자동으로 채워짐)
+        self._accounts_cache = None  # [신규] 불필요한 계좌목록 API 중복 호출 및 rate limit 방지용 캐시
         self.token = None
         self.base_url = "https://openapi.tossinvest.com"
 
@@ -51,7 +52,11 @@ class TossInvestService(BaseBroker):
         """
         [신규] 계좌 목록 조회. accountSeq를 알아내는 용도이며, 계좌 식별 이전 단계이므로
         X-Tossinvest-Account 헤더 없이 토큰만으로 호출합니다.
+        불필요한 Rate-Limit 에러를 방지하기 위해 1회 조회 성공 시 메모리에 캐싱합니다.
         """
+        if self._accounts_cache is not None:
+            return self._accounts_cache
+
         if not self.token:
             await self._issue_token()
 
@@ -67,7 +72,10 @@ class TossInvestService(BaseBroker):
                 if res.status != 200:
                     logger.error(f"❌ [토스 API] 계좌 목록 조회 실패: {res_text}")
                     return []
-                return res_json.get("result", []) or []
+                accounts = res_json.get("result", []) or []
+                if accounts:
+                    self._accounts_cache = accounts
+                return accounts
         except Exception:
             logger.exception("계좌 목록 조회 중 예외 발생")
             return []

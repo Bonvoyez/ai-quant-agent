@@ -42,7 +42,13 @@ class AIClient:
         }
         
         url = self.base_url.rstrip("/")
-        if url and not url.endswith("/chat/completions"):
+        # 마인드로직 FactChat 엔드포인트 자동 정규화:
+        # /v1/gateway/openai -> /v1/gateway/chat/completions/
+        if "mindlogic.ai" in url:
+            url = re.sub(r'/v1/gateway/openai/?$', '/v1/gateway', url)
+            url = re.sub(r'/chat/completions/?$', '', url)
+            url = f"{url.rstrip('/')}/chat/completions/"
+        elif url and not url.endswith("/chat/completions"):
             url = f"{url}/chat/completions"
 
         payload: Dict[str, Any] = {
