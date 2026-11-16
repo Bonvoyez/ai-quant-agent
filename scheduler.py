@@ -533,23 +533,17 @@ class DailyScheduler:
     async def run(self) -> None:
         TOSS_FEE_RATE = 0.001
 
-        logger.info("운영 모드 가동 시작: 뉴욕 장 개장 30분 뒤 오프닝 확인 후 매매 수행 (주말 제외)")
+        logger.info("Autonomous Trading Loop Active: Scheduled at 09:30 AM + 30m NY Time on US Trading Days.")
 
         saved_lessons = self.history.get_lessons(default="")
         if saved_lessons:
             self.cumulative_lessons = saved_lessons
-            logger.info("🧠 저장된 누적 학습 교훈을 불러왔습니다.")
+            logger.info("🧠 Loaded cumulative LLM learning lessons from storage.")
 
-        # [핵심 수정] last_run_date를 항상 None으로 시작하지 않고,
-        # history.json에 남은 "가장 최근 기록 날짜"로 초기화합니다.
-        # 기존 문제: 재시작하면 last_run_date가 None으로 리셋되어, 오늘 이미
-        # 사이클을 완료했더라도 트리거 조건이 다시 참이 되면 오늘 분을
-        # 중복으로 다시 매도/매수할 위험이 있었습니다. 이제 "오늘 이미
-        # history에 기록이 있으면" 오늘은 실행하지 않은 것으로 보지 않습니다.
         last_record = self.history.load_last_record()
         last_run_date = last_record.get("date") or None
         if last_run_date:
-            logger.info(f"📂 이전 세션 기준 마지막 실행일: {last_run_date}")
+            logger.info(f"📂 Resumed session. Last recorded execution date: {last_run_date}")
 
         while True:
             try:
@@ -585,7 +579,7 @@ class DailyScheduler:
                         continue
                     elif strategy_mode == "breakout":
                         try:
-                            logger.info("🚀 [Breakout Strategy] 장전/시초 스크리닝 및 자동 주문 실행")
+                            logger.info("🚀 [Breakout Strategy] Pre-market screening & autonomous execution triggered.")
                             runner = BreakoutStrategyRunner(self.toss, self.telegram)
                             # candidate features will be gathered via pre-market data
                             candidates = await self.market.get_breakout_candidates_premarket() if hasattr(self.market, "get_breakout_candidates_premarket") else []
