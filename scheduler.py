@@ -543,6 +543,9 @@ class DailyScheduler:
         last_record = self.history.load_last_record()
         last_run_date = last_record.get("date") or None
 
+        now_ny_dt = datetime.now(NEW_YORK)
+        today_ny = now_ny_dt.strftime("%Y-%m-%d")
+
         # Check screening_history.json as well for breakout strategy
         from pathlib import Path
         screening_path = Path(__file__).parent / "data" / "screening_history.json"
@@ -554,6 +557,12 @@ class DailyScheduler:
                         last_s_date = s_records[-1].get("date")
                         if last_s_date and (not last_run_date or last_s_date > last_run_date):
                             last_run_date = last_s_date
+                        # If today's screening cycle is already recorded, lock it immediately
+                        for s_rec in s_records:
+                            if s_rec.get("date") == today_ny:
+                                last_run_date = today_ny
+                                logger.info(f"⚡ [Token Optimization] Screening for today ({today_ny}) already completed. Restoring monitoring quietly.")
+                                break
             except Exception:
                 pass
 
@@ -573,19 +582,16 @@ class DailyScheduler:
             active_symbols = list(self.breakout_runner.active_positions.keys())
             logger.info(
                 f"🛡️ [Crash Recovery] Detected {len(active_symbols)} open breakout position(s) from disk: "
-                f"{', '.join(active_symbols)}. Resuming real-time intraday exit monitoring immediately."
+                f"{', '.join(active_symbols)}. Resuming real-time intraday exit monitoring quietly without re-sending reports."
             )
             # If we are already holding open positions on startup, do not re-screen or re-audit today
-            now_ny_dt = datetime.now(NEW_YORK)
-            last_run_date = now_ny_dt.strftime("%Y-%m-%d")
-            logger.info(f"⚡ [Token Optimization] Active position held. Today's screening cycle ({last_run_date}) marked completed.")
+            last_run_date = today_ny
             asyncio.create_task(self.breakout_runner.run_intraday_exit_loop())
 
         while True:
             try:
-                now = datetime.now(KST)
-                now_ny = now.astimezone(NEW_YORK)
-                today_str = now.strftime("%Y-%m-%d")
+                now_ny = datetime.now(NEW_YORK)
+                today_str = now_ny.strftime("%Y-%m-%d")  # Strict New York market calendar date
                 is_trading, market_status = is_trading_day(now_ny)
 
                 # [서머타임 및 공휴일 자동 대응]
