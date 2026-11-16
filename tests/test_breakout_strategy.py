@@ -88,3 +88,41 @@ async def test_snowball_runner_entry_and_trailing(monkeypatch, tmp_path):
     )
     assert action == "SELL"
     assert "TRAILING_STOP" in reason
+
+
+@pytest.mark.asyncio
+async def test_snowball_eod_market_close_exit(monkeypatch, tmp_path):
+    import asyncio
+    from datetime import datetime, date
+    from zoneinfo import ZoneInfo
+    monkeypatch.setenv("ROTATION_DRY_RUN", "0")
+    storage_file = str(tmp_path / "test_eod_positions.json")
+    broker = DummyBroker()
+    tg = DummyTelegramService()
+    runner = BreakoutStrategyRunner(broker, tg, score_threshold=15.0, max_positions=1, storage_file=storage_file)
+
+    candidate = {
+        "ticker": "UPXI",
+        "fact_score": 0.8,
+        "atr_pct": 12.0,
+        "rvol_prev": 2.5,
+        "gap_open_pct": 2.0,
+        "bb_width": 45.0,
+        "is_toxic_material": 0.0,
+    }
+    await runner.screen_and_enter([candidate])
+    assert "UPXI" in runner.active_positions
+
+    # Simulate position carried over from previous day
+    old_time = datetime(2026, 11, 10, 10, 0, tzinfo=ZoneInfo("America/New_York"))
+    runner.active_positions["UPXI"].entry_time = old_time
+
+    # Run one pass of exit loop
+    exit_task = asyncio.create_task(runner.run_intraday_exit_loop(poll_interval_seconds=1))
+    await asyncio.sleep(0.1)
+    runner.stop_monitoring()
+    await exit_task
+
+    # Should have liquidated due to leftover / pure day-trade EOD rule
+    assert "UPXI" not in runner.active_positions
+    assert any(o[0] == "SELL" and o[1] == "UPXI" for o in broker.orders)

@@ -304,6 +304,16 @@ class BreakoutStrategyRunner:
                         highest_price_since_entry=pos.highest_price,
                     )
 
+                    # Pure Day-Trading EOD Rule: Liquidate any open position before market close (15:50~16:00 EST)
+                    # or immediately at market open if held from a previous session.
+                    now_ny = datetime.now(NEW_YORK)
+                    is_eod_window = (now_ny.hour == 15 and now_ny.minute >= 50 and now_ny.minute <= 59)
+                    is_leftover = (pos.entry_time.date() < now_ny.date() and (now_ny.hour > 9 or (now_ny.hour == 9 and now_ny.minute >= 30)))
+                    if action != "SELL" and (is_eod_window or is_leftover):
+                        action = "SELL"
+                        ratio = 1.0
+                        reason = "EOD_MARKET_CLOSE_EXIT (Pure Day-Trading Liquidation)" if is_eod_window else "OVERNIGHT_LEFTOVER_EXIT (Pure Day-Trading Liquidation)"
+
                     if action == "SELL":
                         curr_ret = ((current_price - pos.entry_price) / pos.entry_price) * 100.0
                         logger.info(f"🚨 [Exit Triggered] {ticker} - Reason: {reason} | Return: {curr_ret:.2f}%")
