@@ -21,6 +21,7 @@ env/
 
 # Runtime trade & history data (오라클 서버에서 실시간 갱신되는 기록 파일)
 active_trades.json
+breakout_positions.json
 history.json
 history_lessons.json
 paper_history.json
