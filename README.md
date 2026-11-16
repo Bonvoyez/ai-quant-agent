@@ -83,21 +83,26 @@ An asynchronous, broker-agnostic quantitative trading and portfolio management p
 ```
 ai-quant-agent/
 ├── .github/workflows/ci.yml   # Automated CI Pipeline (Ruff + Pytest)
-├── tests/                     # Comprehensive unit test suite
+├── tests/                     # Comprehensive unit test suite (27 unit tests)
+│   ├── test_ai_intelligence.py
+│   ├── test_analytics_and_logging.py
 │   ├── test_breakout_strategy.py
-│   ├── test_derived_formula.py
-│   ├── test_exit_manager.py
+│   ├── test_broker_persistence.py
 │   ├── test_market_calendar.py
-│   └── test_quant_rules.py
-├── broker.py                  # Abstract BaseBroker interface & MockBroker implementation
-├── toss_service.py            # Pluggable live Toss OpenAPI driver adapter
+│   ├── test_quant_rules.py
+│   ├── test_risk_safeguards.py
+│   └── test_schema_validation.py
+├── analytics_manager.py       # Multi-timeframe performance aggregator & SVG equity curve
 ├── breakout_strategy.py       # Nanocap breakout strategy & position manager
+├── broker.py                  # Abstract BaseBroker interface & MockBroker implementation
 ├── derived_formula.py         # Pure-Python mathematical breakout formula
 ├── exit_manager.py            # Hard stop-loss and trailing stop state machine
-├── market_calendar.py         # US market holiday & DST calculator (NYSE/NASDAQ)
+├── market_calendar.py         # US market holiday & DST calculator + Session State
 ├── market_data.py             # Market quote ingestion and technical indicators
 ├── quant_rules.py             # Volatility models and risk budgeting
 ├── rotation_strategy.py       # Sector ETF momentum rotation strategy
+├── trade_logger.py            # Local ML training logger (.parquet + .jsonl) & near-miss tracking
+├── toss_service.py            # Pluggable live Toss OpenAPI driver adapter
 ├── scheduler.py               # Main trading loop and execution orchestrator
 ├── doctor.py                  # End-to-end 6-subsystem health diagnostic tool
 ├── cli.py                     # CLI entrypoint

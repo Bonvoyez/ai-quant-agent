@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from aiohttp import web
 from settings_manager import SettingsManager
+from analytics_manager import analytics_manager
 
 logger = logging.getLogger("StockReporter")
 
@@ -13,6 +14,7 @@ DASHBOARD_TOKEN = os.getenv("DASHBOARD_TOKEN", "")
 DASHBOARD_HTML_PATH = Path(__file__).parent / "dashboard.html"
 HISTORY_FILE = "history.json"
 ACTIVE_TRADES_FILE = "active_trades.json"
+POSITIONS_FILE = "breakout_positions.json"
 
 settings_manager = SettingsManager()
 
@@ -77,6 +79,43 @@ async def handle_post_settings(request: web.Request) -> web.Response:
     return web.json_response(saved)
 
 
+async def handle_summary(request: web.Request) -> web.Response:
+    if not _check_token(request):
+        logger.warning(f"🚫 대시보드 API 인증 실패 (summary) - IP: {request.remote}")
+        return web.json_response({"error": "unauthorized"}, status=401)
+    
+    timeframe = request.query.get("timeframe", "all")
+    scheduler = request.app.get("scheduler")
+    
+    balance_usd = 0.0
+    active_positions = {}
+    
+    if scheduler:
+        try:
+            if hasattr(scheduler, "broker") and scheduler.broker:
+                balance_usd = await scheduler.broker.get_balance()
+        except Exception as e:
+            logger.debug(f"Could not fetch live broker balance for dashboard: {e}")
+            
+        if hasattr(scheduler, "breakout_runner") and scheduler.breakout_runner:
+            active_positions = scheduler.breakout_runner.active_positions
+            
+    if not active_positions:
+        pos_data = _read_json_file(POSITIONS_FILE)
+        if isinstance(pos_data, list):
+            for item in pos_data:
+                t = item.get("ticker")
+                if t:
+                    active_positions[t] = item
+
+    summary = analytics_manager.get_dashboard_summary(
+        current_balance_usd=balance_usd,
+        active_positions=active_positions,
+        selected_timeframe=timeframe,
+    )
+    return web.json_response(summary)
+
+
 async def handle_dashboard(request: web.Request) -> web.Response:
     if not DASHBOARD_HTML_PATH.exists():
         return web.Response(text="dashboard.html 파일을 찾을 수 없습니다. 같은 폴더에 배치했는지 확인하세요.", status=500)
@@ -87,8 +126,12 @@ async def handle_health(request: web.Request) -> web.Response:
     return web.json_response({"status": "ok"})
 
 
-def create_dashboard_app() -> web.Application:
+def create_dashboard_app(scheduler=None) -> web.Application:
     app = web.Application()
+    if scheduler is not None:
+        app["scheduler"] = scheduler
+
+    app.router.add_get("/api/summary", handle_summary)
     app.router.add_get("/api/history", handle_history)
     app.router.add_get("/api/active-trades", handle_active_trades)
     app.router.add_get("/api/settings", handle_get_settings)

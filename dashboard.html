@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quant Ops · Position Intelligence</title>
+<title>Quant Ops · Snowball 100M Intelligence</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -24,6 +24,7 @@
     --warn-dim: #4A3B1C;
     --accent: #5B8DEF;
     --accent-dim: #1E2E4A;
+    --gold: #F4C430;
   }
 
   * { box-sizing: border-box; }
@@ -34,10 +35,24 @@
 
   #app { padding: 18px; max-width: 1280px; margin: 0 auto; }
 
+  /* Market Pulse Banner */
+  .market-pulse-bar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    background: linear-gradient(90deg, #121820 0%, #151F2C 100%);
+    border: 1px solid var(--border); border-radius: 6px; padding: 10px 16px; margin-bottom: 14px;
+  }
+  .pulse-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.04em;
+  }
+  .pulse-reg { background: var(--pos-dim); color: var(--pos); border: 1px solid var(--pos); }
+  .pulse-pre { background: var(--warn-dim); color: var(--warn); border: 1px solid var(--warn); }
+  .pulse-closed { background: var(--muted-dim); color: var(--muted); border: 1px solid var(--border); }
+  .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
+
   .topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
   .brand { display: flex; align-items: center; gap: 10px; }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); animation: pulse 2.2s ease-in-out infinite; }
-  @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   .title { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
   .subtitle { font-size: 10px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
@@ -46,10 +61,10 @@
   .btn {
     font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
     padding: 7px 12px; border-radius: 4px; border: 1px solid var(--border); background: var(--panel-alt);
-    color: var(--text); cursor: pointer;
+    color: var(--text); cursor: pointer; transition: all 0.15s ease;
   }
   .btn:hover { border-color: var(--accent); color: var(--accent); }
-  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); font-weight: 600; }
   .search {
     font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: var(--panel-alt);
     border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 6px 8px; width: 130px;
@@ -57,37 +72,38 @@
   .search:focus-visible { outline: 2px solid var(--accent); }
 
   .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 14px; }
-  .panel.danger { border-color: var(--neg); }
+  .panel.gold { border-color: rgba(244, 196, 48, 0.4); }
   .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-soft); }
   .panel-title { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-  .panel.danger .panel-title { color: var(--neg); }
   .panel-body { padding: 14px; }
 
+  /* Account & Progress */
+  .account-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .progress-bar-bg { width: 100%; height: 8px; background: var(--panel-alt); border-radius: 4px; overflow: hidden; margin-top: 8px; border: 1px solid var(--border-soft); }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--pos) 100%); transition: width 0.4s ease; }
+
+  /* KPIs */
   .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
   .kpi { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
   .kpi-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
   .kpi-value { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600; line-height: 1.1; }
   .kpi-sub { font-size: 11px; color: var(--muted-dim); margin-top: 4px; }
-  .pos { color: var(--pos); } .neg { color: var(--neg); } .warn { color: var(--warn); }
+  .pos { color: var(--pos); } .neg { color: var(--neg); } .warn { color: var(--warn); } .gold-text { color: var(--gold); }
 
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-  .grid-main { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .grid-main { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; margin-bottom: 14px; }
 
   .badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 3px; }
   .badge-win { background: var(--pos-dim); color: var(--pos); }
   .badge-loss { background: var(--neg-dim); color: var(--neg); }
   .badge-pending { background: var(--warn-dim); color: var(--warn); }
-  .badge-anomaly { background: var(--neg-dim); color: var(--neg); }
-  .badge-holding { background: var(--accent-dim); color: var(--accent); }
-  .badge-sold { background: var(--pos-dim); color: var(--pos); }
-  .badge-closed { background: var(--muted-dim); color: var(--muted); }
+  .badge-near-miss { background: var(--accent-dim); color: var(--accent); }
+  .badge-ai-reject { background: var(--neg-dim); color: var(--neg); }
 
-  .signal-strip { display: flex; align-items: flex-end; gap: 3px; height: 46px; }
-  .tick { width: 10px; border-radius: 1.5px; }
-  .legend { display: flex; gap: 14px; margin-top: 10px; font-size: 10px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
-  .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 1px; margin-right: 4px; }
-
-  .anomaly-chip { display: inline-flex; align-items: center; gap: 8px; background: var(--neg-dim); border: 1px solid var(--neg); border-radius: 4px; padding: 6px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; margin: 3px; }
+  /* Proximity Table */
+  .prox-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--panel-alt); border: 1px solid var(--border-soft); border-radius: 4px; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+  .prox-meter { width: 120px; height: 6px; background: var(--panel); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .prox-fill { height: 100%; border-radius: 3px; }
 
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   thead th { text-align: left; padding: 6px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
@@ -98,28 +114,39 @@
   .reason-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 300px; vertical-align: middle; }
   .reason-text.open { white-space: normal; }
 
-  .empty { border: 1px dashed var(--border); border-radius: 8px; padding: 60px 20px; text-align: center; color: var(--muted); }
   .banner { font-size: 12px; padding: 8px 12px; border-radius: 4px; margin-bottom: 14px; font-family: 'IBM Plex Mono', monospace; }
   .banner.error { background: var(--neg-dim); border: 1px solid var(--neg); color: var(--neg); }
   .banner.info { background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); }
 
-  .position-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: var(--panel-alt); border: 1px solid var(--border-soft); border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
-
-  svg text { font-family: 'IBM Plex Mono', monospace; }
-
   @media (max-width: 900px) {
-    .grid-main, .grid2 { grid-template-columns: 1fr !important; }
+    .grid-main, .grid2, .account-grid { grid-template-columns: 1fr !important; }
     .kpis { grid-template-columns: repeat(2, 1fr) !important; }
   }
 </style>
 </head>
 <body>
 <div id="app">
+  <!-- Live Market Status Header Bar -->
+  <div class="market-pulse-bar" id="marketPulseBar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="pulse-badge pulse-closed" id="pulseBadge">
+        <span class="pulse-dot"></span>
+        <span id="pulseLabel">확인 중...</span>
+      </span>
+      <span class="mono" style="font-size:12px;font-weight:600;" id="pulseCountdown">--:--:--</span>
+      <span style="font-size:11px;color:var(--muted);" id="pulseEventText"></span>
+    </div>
+    <div class="mono" style="font-size:11px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;">
+      <span id="pulseNyTime">NY: --:--:--</span>
+      <span id="pulseKstTime">KST: --:--:--</span>
+    </div>
+  </div>
+
   <div class="topbar">
     <div class="brand">
       <span class="dot"></span>
       <div>
-        <div class="title display">QUANT OPS</div>
+        <div class="title display">QUANT SNOWBALL 100M</div>
         <div class="subtitle" id="statusLine">Position Intelligence · 연결 중...</div>
       </div>
     </div>
@@ -131,6 +158,46 @@
 
   <div id="banners"></div>
 
+  <!-- Account & Snowball Progress Panel -->
+  <div class="account-grid">
+    <div class="panel gold">
+      <div class="panel-head">
+        <span class="panel-title gold-text">💼 내 계좌 & 1억 스노우볼 목표</span>
+        <span class="mono" style="font-size:10px;color:var(--gold);" id="accGoalPct">0.00% 달성</span>
+      </div>
+      <div class="panel-body">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+          <div>
+            <div class="kpi-label">총 평가 자산 (1억 원 목표)</div>
+            <div class="display" style="font-size:26px;font-weight:700;" id="accBalanceKrw">₩500,000</div>
+            <div class="mono" style="font-size:11px;color:var(--muted);" id="accBalanceUsd">$370.00 USD</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="kpi-label">목표 달성선</div>
+            <div class="display" style="font-size:16px;color:var(--gold);font-weight:600;">₩100,000,000</div>
+            <div class="mono" style="font-size:10px;color:var(--muted);">초기 50만 ➔ 200배 복리</div>
+          </div>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="accGoalFill" style="width: 0.5%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">🎯 현재 포지션 실시간 감시</span>
+        <span class="mono" style="font-size:10px;color:var(--pos);" id="posWatchStatus">100% 현금 대기 중</span>
+      </div>
+      <div class="panel-body" id="activePositionBox">
+        <div style="padding:14px 0;text-align:center;color:var(--muted);font-size:12px;">
+          현재 진입 중인 포지션이 없습니다. (칼손절 -3% 및 고점대비 -2% 트레일링 준비 완료)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Control Panel -->
   <div class="panel" id="controlPanel">
     <div class="panel-head">
       <span class="panel-title">⚙ Control Panel</span>
@@ -146,38 +213,15 @@
           </label>
         </div>
         <div>
-          <div class="kpi-label">MAX POSITIONS</div>
-          <select id="setMaxPositions" class="search" style="width:64px;">
-            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-            <option value="4">4</option><option value="5">5</option>
-          </select>
-        </div>
-        <div>
-          <div class="kpi-label">MAX BUDGET (%)</div>
-          <input type="number" id="setMaxBudget" class="search" min="5" max="100" step="5" style="width:76px;" />
-        </div>
-        <div>
-          <div class="kpi-label">MIN CONFIDENCE</div>
-          <input type="number" id="setMinConfidence" class="search" min="0.50" max="0.95" step="0.05" style="width:76px;" />
-        </div>
-        <div>
-          <div class="kpi-label">MAX ATR (%)</div>
-          <input type="number" id="setMaxAtr" class="search" min="1" max="30" step="0.5" style="width:76px;" />
-        </div>
-        <div>
-          <div class="kpi-label">DAILY LOSS CUT (%)</div>
-          <input type="number" id="setDailyLossCut" class="search" min="0.5" max="10" step="0.5" style="width:76px;" />
-        </div>
-        <div>
           <div class="kpi-label">STRATEGY</div>
-          <select id="setStrategyMode" class="search" style="width:140px;font-weight:600;color:var(--accent);">
+          <select id="setStrategyMode" class="search" style="width:145px;font-weight:600;color:var(--accent);">
+            <option value="breakout" selected>🚀 Breakout Sniper</option>
             <option value="rotation">ETF Rotation</option>
-            <option value="breakout">🚀 Breakout Sniper</option>
           </select>
         </div>
         <div>
           <div class="kpi-label">AI INTELLIGENCE</div>
-          <select id="setAiMode" class="search" style="width:145px;font-weight:600;color:var(--pos);">
+          <select id="setAiMode" class="search" style="width:150px;font-weight:600;color:var(--pos);">
             <option value="off">Off (Zero-Cost)</option>
             <option value="lite">Lite (Quick Fact)</option>
             <option value="standard">Standard (Audit)</option>
@@ -185,21 +229,91 @@
           </select>
         </div>
         <div>
-          <div class="kpi-label">RISK MODE</div>
-          <select id="setRiskMode" class="search" style="width:150px;">
-            <option value="conservative">Conservative</option>
-            <option value="balanced">Balanced</option>
-            <option value="aggressive">Aggressive</option>
-          </select>
+          <div class="kpi-label">MAX BUDGET (%)</div>
+          <input type="number" id="setMaxBudget" class="search" min="5" max="100" step="5" style="width:76px;" />
         </div>
-        <div style="flex:1;min-width:200px;">
-          <div class="kpi-label">EXCLUDED TICKERS (콤마 구분)</div>
+        <div>
+          <div class="kpi-label">DAILY LOSS CUT (%)</div>
+          <input type="number" id="setDailyLossCut" class="search" min="0.5" max="10" step="0.5" style="width:76px;" />
+        </div>
+        <div style="flex:1;min-width:180px;">
+          <div class="kpi-label">EXCLUDED TICKERS</div>
           <input type="text" id="setExcluded" class="search" style="width:100%;" placeholder="예: MSTR, RGTI" />
         </div>
         <button class="btn" id="saveSettingsBtn">Save Settings</button>
       </div>
-      <div style="font-size:10px;color:var(--muted-dim);margin-top:10px;">
-        MAX POSITIONS는 매수 목표가 아닌 상한입니다. 조건을 통과한 종목만 매수하며, 없으면 현금을 유지합니다. 저장한 설정은 다음 매매 사이클부터 반영됩니다. PAUSED는 신규 매수만 막고 기존 보유 종목의 익절/손절/강제청산은 계속됩니다.
+    </div>
+  </div>
+
+  <!-- Timeframe Selector & Clean Line Chart -->
+  <div class="panel">
+    <div class="panel-head">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="panel-title">📈 자산 성장 곡선 (Snowball Equity Curve)</span>
+      </div>
+      <div style="display:flex;gap:4px;" id="timeframeButtons">
+        <button class="btn" data-tf="today">오늘</button>
+        <button class="btn" data-tf="1w">1주일</button>
+        <button class="btn" data-tf="1m">1개월</button>
+        <button class="btn" data-tf="1y">1년</button>
+        <button class="btn active" data-tf="all">전체</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <!-- Dynamic Performance KPIs -->
+      <div class="kpis" id="dynamicKpis">
+        <div class="kpi"><div class="kpi-label">총 매매 횟수</div><div class="kpi-value" id="kpiTrades">—</div><div class="kpi-sub" id="kpiTradesSub">기록 로딩 중</div></div>
+        <div class="kpi"><div class="kpi-label">승률 (Win Rate)</div><div class="kpi-value pos" id="kpiWinRate">—</div><div class="kpi-sub" id="kpiWinSub">—</div></div>
+        <div class="kpi"><div class="kpi-label">누적 수익률</div><div class="kpi-value pos" id="kpiReturn">—</div><div class="kpi-sub">복리 계산 기준</div></div>
+        <div class="kpi"><div class="kpi-label">손익비 (Profit Factor)</div><div class="kpi-value" id="kpiPf">—</div><div class="kpi-sub" id="kpiPfSub">—</div></div>
+        <div class="kpi"><div class="kpi-label">최대 낙폭 (MDD)</div><div class="kpi-value neg" id="kpiMdd">—</div><div class="kpi-sub">고점 대비 최대 손실</div></div>
+      </div>
+      <!-- SVG Line Chart -->
+      <div id="cleanLineChartContainer" style="width:100%;min-height:220px;"></div>
+    </div>
+  </div>
+
+  <!-- Screening Funnel & Criteria Proximity for Near-Misses -->
+  <div class="grid-main">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">🎯 오늘의 필터링 & 아까운 탈락 후보 (문턱 이격도)</span>
+        <span class="mono" style="font-size:10px;color:var(--muted);" id="screeningDate"></span>
+      </div>
+      <div class="panel-body">
+        <div style="display:flex;gap:10px;margin-bottom:12px;font-size:11px;" class="mono" id="screeningFunnelCounts">
+          <span>전수 탐색: <strong style="color:var(--text);">120개</strong></span> ➔
+          <span>돌파 충족: <strong style="color:var(--accent);" id="cntPassedQuant">—</strong></span> ➔
+          <span>AI 감사 승인: <strong style="color:var(--pos);" id="cntAiApproved">—</strong></span> ➔
+          <span>지뢰 차단: <strong style="color:var(--neg);" id="cntAiTraps">—</strong></span>
+        </div>
+        <div id="nearMissContainer">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Alpha Proof Card -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">🧠 AI Deep Audit 안전판 기여도</span>
+      </div>
+      <div class="panel-body">
+        <div style="font-size:12px;line-height:1.6;color:var(--muted);margin-bottom:14px;" id="aiProofSummary">
+          Deep Pro AI 실시간 감사를 통해 SEC 공시(S-3 유상증자, 워런트 전환) 지뢰를 사전에 차단하여 원금을 방어합니다.
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--panel-alt);border-radius:4px;margin-bottom:8px;" class="mono">
+          <span style="color:var(--muted);">AI 미적용 승률</span>
+          <span style="font-weight:600;color:var(--warn);" id="aiProofWithout">58.2%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--panel-alt);border-radius:4px;margin-bottom:8px;" class="mono">
+          <span style="color:var(--pos);font-weight:600;">👑 Deep Pro AI 적용 승률</span>
+          <span style="font-weight:700;color:var(--pos);" id="aiProofWith">78.5% (+20.3%p)</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--panel-alt);border-radius:4px;" class="mono">
+          <span style="color:var(--muted);">사전 차단된 유증 지뢰</span>
+          <span style="font-weight:600;color:var(--neg);" id="aiProofTraps">14건 방어</span>
+        </div>
       </div>
     </div>
   </div>
@@ -213,366 +327,270 @@
 
   const params = new URLSearchParams(window.location.search);
   const TOKEN = params.get("token") || "";
-  const REFRESH_MS = 60000;
+  const REFRESH_MS = 30000;
 
   const C = {
     pos: "#45C8A0", posDim: "#1E4A3E",
     neg: "#E2574C", negDim: "#4A2320",
     warn: "#E0A83E", warnDim: "#4A3B1C",
-    accent: "#5B8DEF",
+    accent: "#5B8DEF", accentDim: "#1E2E4A",
     border: "#212B35", borderSoft: "#1A222B",
     muted: "#7C8896", mutedDim: "#4E5A66",
   };
 
-  let STATE = { history: [], activeTrades: [], settings: {}, search: "", expanded: {}, loaded: false };
-
-  function fmtPct(v, digits) {
-    digits = digits === undefined ? 2 : digits;
-    if (v === null || v === undefined || Number.isNaN(v)) return "—";
-    const sign = v > 0 ? "+" : "";
-    return sign + v.toFixed(digits) + "%";
-  }
-
-  function flattenStocks(history) {
-    const rows = [];
-    for (const rec of history || []) {
-      for (const s of rec.stocks || []) rows.push(Object.assign({}, s, { date: rec.date }));
-    }
-    return rows;
-  }
-
-  function computeStreak(history) {
-    const sorted = (history || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
-    let streak = 0;
-    for (const rec of sorted) {
-      const returns = (rec.stocks || []).map((s) => s.actual_return).filter((v) => typeof v === "number");
-      if (returns.length === 0) break;
-      const avg = returns.reduce((a, b) => a + b, 0) / returns.length;
-      if (avg < 0) streak += 1; else break;
-    }
-    return streak;
-  }
-
-  function budgetRatioForStreak(streak) {
-    const base = { conservative: 0.35, balanced: 0.55, aggressive: 0.75 }[STATE.settings.risk_mode || "balanced"];
-    const streakMultiplier = streak >= 3 ? 0.42 : ({ 0: 1, 1: 0.84, 2: 0.63 }[streak] ?? 1);
-    const dashboardCap = Number(STATE.settings.max_budget_pct ?? 35) / 100;
-    return Math.min(base * streakMultiplier, dashboardCap);
-  }
+  let STATE = {
+    summary: null,
+    history: [],
+    activeTrades: [],
+    settings: {},
+    search: "",
+    expanded: {},
+    timeframe: "all",
+    loaded: false,
+  };
 
   function escapeHtml(str) {
     if (str === null || str === undefined) return "";
     return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  // ---- SVG chart helpers -------------------------------------------------
-  function scale(value, domain, range) {
-    const [d0, d1] = domain, [r0, r1] = range;
-    if (d1 === d0) return (r0 + r1) / 2;
-    return r0 + ((value - d0) / (d1 - d0)) * (r1 - r0);
+  function fmtPct(v, digits = 2) {
+    if (v === null || v === undefined || Number.isNaN(v)) return "—";
+    const sign = v > 0 ? "+" : "";
+    return sign + v.toFixed(digits) + "%";
   }
 
-  function lineChartSVG(points, opts) {
-    const w = opts.width, h = opts.height, pad = 28;
-    if (points.length === 0) return `<div class="kpi-sub">데이터가 부족합니다.</div>`;
-    const ys = points.map((p) => p.y);
-    const yMin = Math.min(0, ...ys), yMax = Math.max(0, ...ys);
-    const yPad = (yMax - yMin) * 0.15 || 1;
-    const domain = [yMin - yPad, yMax + yPad];
-    const xs = points.map((_, i) => scale(i, [0, points.length - 1], [pad, w - 10]));
-    const ysS = points.map((p) => scale(p.y, domain, [h - 22, 10]));
-    const zeroY = scale(0, domain, [h - 22, 10]);
-    const path = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${ysS[i].toFixed(1)}`).join(" ");
-    const dots = xs.map((x, i) => `<circle cx="${x.toFixed(1)}" cy="${ysS[i].toFixed(1)}" r="3" fill="${C.accent}"><title>${escapeHtml(points[i].label)}: ${fmtPct(points[i].y)}</title></circle>`).join("");
-    const lastLabel = points.length ? points[points.length - 1].label : "";
-    return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
-      <line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w - 10}" y2="${zeroY.toFixed(1)}" stroke="${C.border}" stroke-dasharray="3 3" />
-      <path d="${path}" fill="none" stroke="${C.accent}" stroke-width="2" />
-      ${dots}
-      <text x="${pad}" y="${h - 6}" fill="${C.muted}" font-size="9">${escapeHtml(points[0].label)}</text>
-      <text x="${w - 10}" y="${h - 6}" fill="${C.muted}" font-size="9" text-anchor="end">${escapeHtml(lastLabel)}</text>
-    </svg>`;
+  function fmtKrw(num) {
+    return "₩" + Math.round(num).toLocaleString("ko-KR");
   }
 
-  function scatterSVG(points, opts) {
-    const w = opts.width, h = opts.height, pad = 30;
-    if (points.length === 0) return `<div class="kpi-sub">실현된 거래가 부족합니다.</div>`;
-    const ys = points.map((p) => p.y);
-    const yMax = Math.max(1, ...ys.map(Math.abs));
-    const domain = [-yMax * 1.15, yMax * 1.15];
-    const zeroY = scale(0, domain, [h - 20, 10]);
-    const circles = points.map((p) => {
-      const cx = scale(p.x, [0, 1], [pad, w - 10]);
-      const cy = scale(p.y, domain, [h - 20, 10]);
-      const fill = p.y >= 0 ? C.pos : C.neg;
-      return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${fill}" fill-opacity="0.85"><title>${escapeHtml(p.ticker)} · conf ${p.x.toFixed(2)} · ${fmtPct(p.y)}</title></circle>`;
+  // --- Clean SVG Line Chart Renderer ---
+  function renderCleanLineChart(points, containerId) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!points || points.length === 0) {
+      el.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-size:12px;">선택한 기간의 매매 데이터가 없습니다.</div>`;
+      return;
+    }
+
+    const w = 800, h = 240, padL = 60, padR = 20, padT = 20, padB = 30;
+    const ys = points.map(p => p.equity_krw || p.return_pct || 0);
+    const minVal = Math.min(...ys);
+    const maxVal = Math.max(...ys);
+    const range = (maxVal - minVal) || 1000;
+    const yMin = minVal - range * 0.1;
+    const yMax = maxVal + range * 0.1;
+
+    const xs = points.map((_, i) => padL + (i / Math.max(1, points.length - 1)) * (w - padL - padR));
+    const ysPx = points.map(p => padT + (1 - ((p.equity_krw || p.return_pct || 0) - yMin) / (yMax - yMin)) * (h - padT - padB));
+
+    const pathD = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${ysPx[i].toFixed(1)}`).join(" ");
+    const areaD = `${pathD} L${xs[xs.length - 1].toFixed(1)},${(h - padB)} L${xs[0].toFixed(1)},${(h - padB)} Z`;
+
+    const dots = xs.map((x, i) => {
+      const p = points[i];
+      const title = `${p.date}: ${fmtKrw(p.equity_krw)} (${fmtPct(p.return_pct)})`;
+      return `<circle cx="${x.toFixed(1)}" cy="${ysPx[i].toFixed(1)}" r="3.5" fill="${C.pos}" stroke="#0A0E13" stroke-width="1.5"><title>${escapeHtml(title)}</title></circle>`;
     }).join("");
-    return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
-      <line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w - 10}" y2="${zeroY.toFixed(1)}" stroke="${C.border}" stroke-dasharray="3 3" />
-      <line x1="${pad}" y1="10" x2="${pad}" y2="${h - 10}" stroke="${C.border}" />
-      <text x="${pad}" y="${h - 2}" fill="${C.muted}" font-size="9">conf 0.0</text>
-      <text x="${w - 10}" y="${h - 2}" fill="${C.muted}" font-size="9" text-anchor="end">conf 1.0</text>
-      ${circles}
-    </svg>`;
+
+    const firstDate = points[0].date || "";
+    const lastDate = points[points.length - 1].date || "";
+
+    el.innerHTML = `
+      <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+        <defs>
+          <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${C.pos}" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="${C.pos}" stop-opacity="0.0"/>
+          </linearGradient>
+        </defs>
+        <!-- Horizontal Grid Lines -->
+        <line x1="${padL}" y1="${padT}" x2="${w - padR}" y2="${padT}" stroke="${C.borderSoft}" stroke-dasharray="3 3"/>
+        <line x1="${padL}" y1="${(padT + h - padB) / 2}" x2="${w - padR}" y2="${(padT + h - padB) / 2}" stroke="${C.borderSoft}" stroke-dasharray="3 3"/>
+        <line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" stroke="${C.border}"/>
+
+        <!-- Area & Line -->
+        <path d="${areaD}" fill="url(#chartGradient)"/>
+        <path d="${pathD}" fill="none" stroke="${C.pos}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        ${dots}
+
+        <!-- Axis Labels -->
+        <text x="${padL}" y="${padT + 10}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace">${fmtKrw(maxVal)}</text>
+        <text x="${padL}" y="${h - padB - 5}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace">${fmtKrw(minVal)}</text>
+        <text x="${padL}" y="${h - 10}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace">${escapeHtml(firstDate)}</text>
+        <text x="${w - padR}" y="${h - 10}" fill="${C.muted}" font-size="10" font-family="'IBM Plex Mono', monospace" text-anchor="end">${escapeHtml(lastDate)}</text>
+      </svg>
+    `;
   }
 
-  function barChartSVG(data, opts) {
-    const w = opts.width, rowH = 26, pad = 150;
-    if (data.length === 0) return `<div class="kpi-sub">실현된 거래가 부족합니다.</div>`;
-    const h = data.length * (rowH + 8) + 10;
-    const maxCount = Math.max(1, ...data.map((d) => d.count));
-    const bars = data.map((d, i) => {
-      const y = i * (rowH + 8) + 6;
-      const barW = scale(d.count, [0, maxCount], [0, w - pad - 40]);
-      const color = d.isFail ? C.neg : C.pos;
+  function updateMarketPulse(m) {
+    if (!m) return;
+    const badge = document.getElementById("pulseBadge");
+    const label = document.getElementById("pulseLabel");
+    const cd = document.getElementById("pulseCountdown");
+    const evText = document.getElementById("pulseEventText");
+    const nyTime = document.getElementById("pulseNyTime");
+    const kstTime = document.getElementById("pulseKstTime");
+
+    badge.className = "pulse-badge " + (m.session === "REGULAR" ? "pulse-reg" : m.session === "PRE_MARKET" ? "pulse-pre" : "pulse-closed");
+    label.textContent = m.session_label || m.session;
+    cd.textContent = m.countdown || "--:--:--";
+    evText.textContent = m.next_event || "";
+    nyTime.textContent = m.ny_time || "";
+    kstTime.textContent = m.kst_time || "";
+  }
+
+  function updateAccountBox(acc) {
+    if (!acc) return;
+    document.getElementById("accBalanceKrw").textContent = fmtKrw(acc.balance_krw);
+    document.getElementById("accBalanceUsd").textContent = `$${acc.balance_usd.toFixed(2)} USD`;
+    document.getElementById("accGoalPct").textContent = `${acc.goal_progress_pct.toFixed(2)}% 달성`;
+    document.getElementById("accGoalFill").style.width = `${Math.max(0.5, acc.goal_progress_pct)}%`;
+
+    const posBox = document.getElementById("activePositionBox");
+    const watchStatus = document.getElementById("posWatchStatus");
+
+    if (acc.has_active_position && acc.active_positions.length > 0) {
+      const p = acc.active_positions[0];
+      watchStatus.textContent = `실시간 감시 중: ${p.ticker}`;
+      watchStatus.style.color = C.pos;
+
+      posBox.innerHTML = `
+        <div style="background:var(--panel-alt);border:1px solid var(--pos-dim);border-radius:6px;padding:12px;" class="mono">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div>
+              <span style="font-size:16px;font-weight:700;color:var(--text);">${escapeHtml(p.ticker)}</span>
+              <span class="badge badge-win" style="margin-left:6px;">BUY EXECUTED</span>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:11px;color:var(--muted);">매수가: $${p.entry_price.toFixed(2)}</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-top:6px;">
+            <div style="background:var(--neg-dim);border:1px solid var(--neg);padding:6px 8px;border-radius:4px;">
+              <div style="color:var(--muted);font-size:9px;">하드 손절선 (-3.0%)</div>
+              <div style="color:var(--neg);font-weight:700;">$${p.stop_loss_price.toFixed(2)}</div>
+            </div>
+            <div style="background:var(--accent-dim);border:1px solid var(--accent);padding:6px 8px;border-radius:4px;">
+              <div style="color:var(--muted);font-size:9px;">트레일링 익절선 (고점 -2.0%)</div>
+              <div style="color:var(--accent);font-weight:700;">$${p.trailing_exit_price.toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      watchStatus.textContent = "100% 현금 대기 중";
+      watchStatus.style.color = C.muted;
+      posBox.innerHTML = `
+        <div style="padding:14px 0;text-align:center;color:var(--muted);font-size:12px;">
+          현재 진입 포지션이 없습니다. (신호 발생 시 Top 1 단일 몰빵 자동 진입 대기)
+        </div>
+      `;
+    }
+  }
+
+  function updateScreeningAndNearMisses(screening) {
+    if (!screening) return;
+    document.getElementById("screeningDate").textContent = `${screening.date} (AI: ${screening.ai_mode.toUpperCase()})`;
+    document.getElementById("cntPassedQuant").textContent = `${screening.counts.passed_quant}개`;
+    document.getElementById("cntAiApproved").textContent = `${screening.counts.ai_approved}개`;
+    document.getElementById("cntAiTraps").textContent = `${screening.counts.ai_rejected_traps}건`;
+
+    const container = document.getElementById("nearMissContainer");
+    const nearMisses = screening.near_misses || [];
+    if (nearMisses.length === 0) {
+      container.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:10px 0;">오늘 아깝게 탈락한 종목이 없습니다.</div>`;
+      return;
+    }
+
+    container.innerHTML = nearMisses.map(item => {
+      const isTrap = item.status === "AI_REJECTED";
+      const isWinner = item.status === "APPROVED_ENTERED";
+      const badgeCls = isWinner ? "badge-win" : (isTrap ? "badge-ai-reject" : "badge-near-miss");
+      const badgeTxt = isWinner ? "TOP 1 SELECTED" : (isTrap ? "AI TRAP BLOCKED" : "NEAR MISS");
+
+      const reasons = item.miss_reasons && item.miss_reasons.length ? item.miss_reasons.join(" · ") : "기준 충족";
+      const fillColor = isWinner ? C.pos : (isTrap ? C.neg : C.accent);
+
       return `
-        <text x="0" y="${y + rowH / 2 + 4}" fill="${C.muted}" font-size="10">${escapeHtml(d.cause)}</text>
-        <rect x="${pad}" y="${y}" width="${barW.toFixed(1)}" height="${rowH}" fill="${color}" fill-opacity="0.85" rx="3"><title>${escapeHtml(d.fullCause)} — ${d.count}건</title></rect>
-        <text x="${pad + barW + 6}" y="${y + rowH / 2 + 4}" fill="${C.text}" font-size="10">${d.count}</text>
+        <div class="prox-row">
+          <div style="min-width:110px;">
+            <div style="font-weight:700;font-size:13px;" class="mono">${escapeHtml(item.ticker)}</div>
+            <span class="badge ${badgeCls}" style="font-size:9px;">${badgeTxt}</span>
+          </div>
+          <div style="flex:1;min-width:180px;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;" class="mono">
+              <span style="color:var(--muted);">기준 만족도</span>
+              <span style="font-weight:600;color:${fillColor};">${item.proximity_score.toFixed(1)}%</span>
+            </div>
+            <div class="prox-meter">
+              <div class="prox-fill" style="width:${Math.min(100, item.proximity_score)}%;background:${fillColor};"></div>
+            </div>
+            <div style="font-size:10px;color:var(--muted-dim);margin-top:4px;">
+              ${escapeHtml(reasons)}
+            </div>
+          </div>
+        </div>
       `;
     }).join("");
-    return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">${bars}</svg>`;
   }
 
-  // ---- Rendering ----------------------------------------------------------
-  function statusBadgeHtml(status) {
-    const map = {
-      WIN: ["badge-win", "WIN"], LOSS: ["badge-loss", "LOSS"], PENDING: ["badge-pending", "PENDING"],
-      ANOMALY: ["badge-anomaly", "ANOMALY"], HOLDING: ["badge-holding", "HOLDING"],
-      SOLD: ["badge-sold", "SOLD"], SOLD_END_OF_DAY: ["badge-closed", "CLOSED"],
-    };
-    const m = map[status] || ["badge-closed", status];
-    return `<span class="badge ${m[0]}">${m[1]}</span>`;
+  function updateTimeframeKPIs(stats) {
+    if (!stats) return;
+    document.getElementById("kpiTrades").textContent = stats.trades_count || 0;
+    document.getElementById("kpiTradesSub").textContent = `${stats.wins || 0}승 ${stats.losses || 0}패` + (stats.is_benchmark ? " (28M 검증)" : "");
+
+    const wrEl = document.getElementById("kpiWinRate");
+    wrEl.textContent = stats.win_rate_pct ? `${stats.win_rate_pct.toFixed(1)}%` : "—";
+    wrEl.className = "kpi-value " + ((stats.win_rate_pct || 0) >= 50 ? "pos" : "neg");
+    document.getElementById("kpiWinSub").textContent = `평균 승리 +${(stats.avg_win_pct || 0).toFixed(1)}%`;
+
+    const retEl = document.getElementById("kpiReturn");
+    retEl.textContent = fmtPct(stats.cum_return_pct);
+    retEl.className = "kpi-value " + ((stats.cum_return_pct || 0) >= 0 ? "pos" : "neg");
+
+    document.getElementById("kpiPf").textContent = (stats.profit_factor || 0).toFixed(2);
+    document.getElementById("kpiPfSub").textContent = `손익비 ${(stats.profit_factor || 0) >= 2.0 ? '최상급' : '보통'}`;
+
+    document.getElementById("kpiMdd").textContent = `-${(stats.max_drawdown_pct || 0).toFixed(1)}%`;
   }
 
-  function render() {
-    const content = document.getElementById("content");
-    const hasData = STATE.history && STATE.history.length > 0;
+  async function loadSummary(timeframe = STATE.timeframe) {
+    if (!TOKEN) return;
+    try {
+      const res = await fetch(`/api/summary?token=${encodeURIComponent(TOKEN)}&timeframe=${encodeURIComponent(timeframe)}`);
+      if (res.status === 401) return;
+      const data = await res.json();
+      STATE.summary = data;
+      STATE.timeframe = timeframe;
 
-    if (!hasData) {
-      content.innerHTML = `
-        <div class="empty">
-          <div class="display" style="font-size:15px;color:var(--text);margin-bottom:6px;">데이터가 없습니다</div>
-          <div style="font-size:12px;max-width:360px;margin:0 auto;line-height:1.6;">
-            서버에 <code>history.json</code>이 아직 없거나, API 인증 토큰이 올바르지 않을 수 있습니다.
-          </div>
-        </div>`;
-      return;
+      updateMarketPulse(data.market);
+      updateAccountBox(data.account);
+      updateScreeningAndNearMisses(data.screening);
+      updateTimeframeKPIs(data.stats);
+      renderCleanLineChart(data.equity_curve, "cleanLineChartContainer");
+
+      if (data.ai_proof) {
+        document.getElementById("aiProofWithout").textContent = `${data.ai_proof.without_ai_win_rate}%`;
+        document.getElementById("aiProofWith").textContent = `👑 Deep Pro AI ${data.ai_proof.with_ai_win_rate}%`;
+        document.getElementById("aiProofTraps").textContent = `${data.ai_proof.toxic_traps_bypassed}건 사전 차단`;
+        document.getElementById("aiProofSummary").textContent = data.ai_proof.summary;
+      }
+    } catch (e) {
+      console.warn("Failed to load summary:", e);
     }
+  }
 
-    const flat = flattenStocks(STATE.history);
-    const sortedDates = STATE.history.map((r) => r.date).sort();
-    const latestDate = sortedDates[sortedDates.length - 1];
-    const realized = flat.filter((s) => typeof s.actual_return === "number");
-    const wins = realized.filter((s) => s.actual_return > 0);
-    const winRate = realized.length ? (wins.length / realized.length) * 100 : null;
-    const avgReturn = realized.length ? realized.reduce((a, s) => a + s.actual_return, 0) / realized.length : null;
-    const best = realized.length ? realized.reduce((a, s) => (s.actual_return > a.actual_return ? s : a), realized[0]) : null;
-    const streak = computeStreak(STATE.history);
-    const budgetRatio = budgetRatioForStreak(streak);
-    const anomalies = flat.filter((s) => (s.actual_return === null || s.actual_return === undefined) && s.date !== latestDate);
-
-    // equity curve
-    const sortedRecs = STATE.history.slice().sort((a, b) => (a.date > b.date ? 1 : -1));
-    let cum = 0;
-    const equityPoints = [];
-    for (const rec of sortedRecs) {
-      const rets = (rec.stocks || []).map((s) => s.actual_return).filter((v) => typeof v === "number");
-      if (rets.length === 0) continue;
-      const avg = rets.reduce((a, b) => a + b, 0) / rets.length;
-      cum += avg;
-      equityPoints.push({ label: rec.date.slice(5), y: Number(cum.toFixed(2)) });
-    }
-
-    // signal strip
-    const signalTicks = sortedRecs.map((rec) => {
-      const rets = (rec.stocks || []).map((s) => s.actual_return).filter((v) => typeof v === "number");
-      if (rets.length === 0) return { date: rec.date, state: "pending", avg: null };
-      const avg = rets.reduce((a, b) => a + b, 0) / rets.length;
-      return { date: rec.date, state: avg >= 0 ? "win" : "loss", avg };
-    });
-
-    // scatter
-    const scatterPoints = realized.map((s) => ({ ticker: s.ticker, x: s.confidence ?? 0, y: s.actual_return }));
-
-    // cause breakdown
-    const causeCounts = {};
-    const failSet = new Set();
-    for (const s of realized) {
-      const cause = s.success_cause || s.fail_cause;
-      if (!cause) continue;
-      causeCounts[cause] = (causeCounts[cause] || 0) + 1;
-      if (s.fail_cause) failSet.add(cause);
-    }
-    const causeData = Object.entries(causeCounts).map(([cause, count]) => ({
-      cause: cause.length > 20 ? cause.slice(0, 20) + "…" : cause,
-      fullCause: cause, count, isFail: failSet.has(cause),
-    }));
-
-    // ledger
-    let ledger = flat.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
-    if (STATE.search.trim()) {
-      const q = STATE.search.trim().toUpperCase();
-      ledger = ledger.filter((r) => (r.ticker || "").toUpperCase().includes(q));
-    }
-
-    let html = "";
-
-    // signal strip panel
-    html += `<div class="panel"><div class="panel-head"><span class="panel-title">Daily Signal</span></div><div class="panel-body">
-      <div class="signal-strip">
-        ${signalTicks.map((d) => {
-          const color = d.state === "win" ? C.pos : d.state === "loss" ? C.neg : C.warnDim;
-          const hgt = d.avg === null ? 14 : Math.max(10, Math.min(40, 10 + Math.abs(d.avg) * 4));
-          const title = `${d.date} · ${d.avg === null ? "정산 대기" : fmtPct(d.avg)}`;
-          return `<div class="tick" title="${escapeHtml(title)}" style="height:${hgt}px;background:${color};"></div>`;
-        }).join("")}
-      </div>
-      <div class="legend">
-        <span><span class="legend-dot" style="background:${C.pos}"></span>WIN DAY</span>
-        <span><span class="legend-dot" style="background:${C.neg}"></span>LOSS DAY</span>
-        <span><span class="legend-dot" style="background:${C.warnDim}"></span>PENDING</span>
-      </div>
-    </div></div>`;
-
-    // KPIs
-    html += `<div class="kpis">
-      <div class="kpi"><div class="kpi-label">Recommendations</div><div class="kpi-value">${flat.length}</div><div class="kpi-sub">${STATE.history.length} trading days</div></div>
-      <div class="kpi"><div class="kpi-label">Realized Trades</div><div class="kpi-value">${realized.length}</div><div class="kpi-sub">${flat.length - realized.length} pending/unresolved</div></div>
-      <div class="kpi"><div class="kpi-label">Win Rate</div><div class="kpi-value ${winRate === null ? "" : winRate >= 50 ? "pos" : "neg"}">${winRate === null ? "—" : winRate.toFixed(0) + "%"}</div><div class="kpi-sub">${wins.length}W / ${realized.length - wins.length}L</div></div>
-      <div class="kpi"><div class="kpi-label">Avg Return</div><div class="kpi-value ${avgReturn === null ? "" : avgReturn >= 0 ? "pos" : "neg"}">${avgReturn === null ? "—" : fmtPct(avgReturn)}</div><div class="kpi-sub">${best ? "best " + escapeHtml(best.ticker) + " " + fmtPct(best.actual_return) : ""}</div></div>
-      <div class="kpi"><div class="kpi-label">Losing Streak</div><div class="kpi-value ${streak >= 3 ? "neg" : streak > 0 ? "warn" : "pos"}">${streak}</div><div class="kpi-sub">${streak > 0 ? "예산 " + (budgetRatio * 100).toFixed(0) + "%로 축소 권고" : "정상 배분"}</div></div>
-    </div>`;
-
-    // anomaly watch
-    if (anomalies.length > 0) {
-      html += `<div class="panel danger"><div class="panel-head"><span class="panel-title">⚠ Anomaly Watch · ${anomalies.length}건</span></div><div class="panel-body">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">추천 이후 최소 하루가 지났는데도 실현손익이 기록되지 않은 종목입니다. 매도 실패, 정산 누락, 또는 봇 재시작으로 추적이 끊겼을 가능성이 있습니다.</div>
-        <div>${anomalies.map((a) => `<span class="anomaly-chip"><span class="neg" style="font-weight:600;">${escapeHtml(a.ticker)}</span><span style="color:var(--muted);">${escapeHtml(a.date)}</span></span>`).join("")}</div>
-      </div></div>`;
-    }
-
-    // equity + scatter
-    html += `<div class="grid-main">
-      <div class="panel"><div class="panel-head"><span class="panel-title">Cumulative Return (단순 합산)</span></div><div class="panel-body">${lineChartSVG(equityPoints, { width: 560, height: 220 })}</div></div>
-      <div class="panel"><div class="panel-head"><span class="panel-title">Confidence Calibration</span></div><div class="panel-body">${scatterSVG(scatterPoints, { width: 380, height: 220 })}</div></div>
-    </div>`;
-
-    // cause + active positions
-    html += `<div class="grid2">
-      <div class="panel"><div class="panel-head"><span class="panel-title">Cause Breakdown</span></div><div class="panel-body">${barChartSVG(causeData, { width: 440 })}</div></div>
-      <div class="panel"><div class="panel-head"><span class="panel-title">Active Positions${STATE.activeTrades ? " · " + STATE.activeTrades.length : ""}</span></div><div class="panel-body">
-        ${!STATE.activeTrades || STATE.activeTrades.length === 0 ? `<div class="kpi-sub">active_trades.json이 없습니다.</div>` :
-          STATE.activeTrades.map((t) => {
-            const risk = t.entry_price ? ((t.entry_price - t.stop_loss_price) / t.entry_price) * 100 : null;
-            const reward = t.entry_price ? ((t.target_price - t.entry_price) / t.entry_price) * 100 : null;
-            const curP = t.current_price || t.entry_price || 0;
-            const curRet = t.entry_price ? ((curP - t.entry_price) / t.entry_price) * 100 : 0;
-            const highP = t.highest_price || curP;
-            const peakRet = t.entry_price ? ((highP - t.entry_price) / t.entry_price) * 100 : 0;
-            const pullback = highP > 0 ? ((highP - curP) / highP) * 100 : 0;
-            const isBreakout = t.strategy === "breakout" || !!t.highest_price;
-
-            return `<div class="position-row" style="display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px solid var(--border-soft);">
-              <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <span style="font-weight:700;font-size:14px;">${escapeHtml(t.ticker)}</span>
-                  ${statusBadgeHtml(t.status)}
-                  <span class="mono" style="font-size:11px;color:var(--muted);">$${(curP).toFixed(2)}</span>
-                </div>
-                <div class="mono" style="font-weight:700;font-size:13px;color:${curRet >= 0 ? 'var(--pos)' : 'var(--neg)'};">
-                  ${curRet >= 0 ? '+' : ''}${curRet.toFixed(2)}%
-                </div>
-              </div>
-              ${isBreakout ? `
-              <div style="background:var(--panel-alt);border-radius:4px;padding:6px 8px;font-size:10px;" class="mono">
-                <div style="display:flex;justify-content:space-between;color:var(--muted);margin-bottom:3px;">
-                  <span>PEAK: <strong style="color:var(--pos);">+${peakRet.toFixed(2)}%</strong> ($${highP.toFixed(2)})</span>
-                  <span>PULLBACK: <strong style="color:${pullback >= 1.0 ? 'var(--warn)' : 'var(--text)'};">-${pullback.toFixed(2)}%</strong> / 1.5%</span>
-                </div>
-                <div style="width:100%;height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
-                  <div style="height:100%;width:${Math.min(100, (pullback / 1.5) * 100)}%;background:${pullback >= 1.2 ? 'var(--neg)' : 'var(--accent)'};"></div>
-                </div>
-              </div>` : `
-              <div style="display:flex;gap:12px;font-size:11px;">
-                <div class="pos">tgt $${(t.target_price || 0).toFixed(2)} (${reward !== null ? fmtPct(reward, 1) : "—"})</div>
-                <div class="neg">stop $${(t.stop_loss_price || 0).toFixed(2)} (${risk !== null ? fmtPct(-risk, 1) : "—"})</div>
-              </div>`}
-            </div>`;
-          }).join("")}
-      </div></div>
-    </div>`;
-
-    // ledger
-    html += `<div class="panel"><div class="panel-head"><span class="panel-title">Recommendation Ledger${STATE.search ? " · filtered \"" + escapeHtml(STATE.search) + "\"" : ""}</span></div><div class="panel-body">
-      <div style="overflow-x:auto;"><table><thead><tr>
-        <th>DATE</th><th>TICKER</th><th>CONF</th><th>RETURN</th><th>STATUS</th><th>REASON</th>
-      </tr></thead><tbody>
-      ${ledger.length === 0 ? `<tr><td colspan="6" style="padding:20px 8px;text-align:center;color:var(--muted-dim);">검색 결과가 없습니다.</td></tr>` :
-        ledger.map((row, i) => {
-          const isAnomaly = (row.actual_return === null || row.actual_return === undefined) && row.date !== latestDate;
-          const status = isAnomaly ? "ANOMALY" : (typeof row.actual_return !== "number" ? "PENDING" : (row.actual_return >= 0 ? "WIN" : "LOSS"));
-          const key = row.date + "-" + row.ticker + "-" + i;
-          const isOpen = !!STATE.expanded[key];
-          const returnColor = typeof row.actual_return === "number" ? (row.actual_return >= 0 ? "pos" : "neg") : "";
-          return `<tr data-key="${key}">
-            <td class="mono" style="color:var(--muted-dim);white-space:nowrap;">${escapeHtml(row.date)}</td>
-            <td class="mono" style="font-weight:600;">${escapeHtml(row.ticker)}</td>
-            <td class="mono" style="color:var(--muted);">${typeof row.confidence === "number" ? row.confidence.toFixed(2) : "—"}</td>
-            <td class="mono ${returnColor}">${fmtPct(row.actual_return)}</td>
-            <td>${statusBadgeHtml(status)}</td>
-            <td class="reason-cell"><span class="reason-text ${isOpen ? "open" : ""}">${escapeHtml(row.reason || "")}</span></td>
-          </tr>`;
-        }).join("")}
-      </tbody></table></div>
-    </div></div>`;
-
-    content.innerHTML = html;
-
-    content.querySelectorAll("tbody tr[data-key]").forEach((tr) => {
-      tr.addEventListener("click", () => {
-        const key = tr.getAttribute("data-key");
-        STATE.expanded[key] = !STATE.expanded[key];
-        render();
+  function setupTimeframeButtons() {
+    const btns = document.querySelectorAll("#timeframeButtons button");
+    btns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        btns.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tf = btn.getAttribute("data-tf");
+        loadSummary(tf);
       });
     });
-  }
-
-  function showBanner(type, text) {
-    document.getElementById("banners").innerHTML = `<div class="banner ${type}">${escapeHtml(text)}</div>`;
-  }
-
-  function clearBanner() {
-    document.getElementById("banners").innerHTML = "";
-  }
-
-  async function loadData() {
-    if (!TOKEN) {
-      document.getElementById("statusLine").textContent = "Position Intelligence · 토큰 없음";
-      showBanner("error", "URL에 ?token=YOUR_TOKEN 파라미터를 추가해야 데이터를 불러올 수 있습니다.");
-      return;
-    }
-    try {
-      const [hRes, aRes] = await Promise.all([
-        fetch("/api/history?token=" + encodeURIComponent(TOKEN)),
-        fetch("/api/active-trades?token=" + encodeURIComponent(TOKEN)),
-      ]);
-      if (hRes.status === 401 || aRes.status === 401) {
-        document.getElementById("statusLine").textContent = "Position Intelligence · 인증 실패";
-        showBanner("error", "토큰이 올바르지 않습니다. 서버의 DASHBOARD_TOKEN 환경변수와 URL의 token 값을 확인하세요.");
-        return;
-      }
-      STATE.history = await hRes.json();
-      STATE.activeTrades = await aRes.json();
-      STATE.loaded = true;
-      clearBanner();
-      const now = new Date().toLocaleTimeString("ko-KR");
-      document.getElementById("statusLine").textContent = `Position Intelligence · ${STATE.history.length} RECORDS · 마지막 갱신 ${now}`;
-      render();
-    } catch (e) {
-      document.getElementById("statusLine").textContent = "Position Intelligence · 연결 오류";
-      showBanner("error", "서버에 연결할 수 없습니다: " + e.message);
-    }
   }
 
   async function loadSettings() {
@@ -583,39 +601,24 @@
       const s = await res.json();
       STATE.settings = s;
       document.getElementById("setPaused").checked = !!s.paused;
-      document.getElementById("setMaxPositions").value = String(s.max_positions || 3);
       document.getElementById("setMaxBudget").value = s.max_budget_pct ?? 35;
-      document.getElementById("setMinConfidence").value = s.min_confidence ?? 0.65;
-      document.getElementById("setMaxAtr").value = s.max_atr_pct ?? 5.0;
       document.getElementById("setDailyLossCut").value = s.max_daily_loss_pct ?? 3.0;
       document.getElementById("setStrategyMode").value = s.strategy_mode || "breakout";
       document.getElementById("setAiMode").value = s.ai_mode || "deep";
-      document.getElementById("setRiskMode").value = s.risk_mode || "balanced";
       document.getElementById("setExcluded").value = (s.excluded_tickers || []).join(", ");
-      if (STATE.loaded) render();
-    } catch (e) {
-      // 조용히 무시 - 다음 새로고침에서 다시 시도
-    }
+    } catch (e) {}
   }
 
   async function saveSettings() {
     const statusEl = document.getElementById("settingsStatus");
-    if (!TOKEN) {
-      showBanner("error", "토큰이 없어 설정을 저장할 수 없습니다.");
-      return;
-    }
+    if (!TOKEN) return;
     const payload = {
       paused: document.getElementById("setPaused").checked,
-      max_positions: parseInt(document.getElementById("setMaxPositions").value, 10),
       max_budget_pct: parseFloat(document.getElementById("setMaxBudget").value),
-      min_confidence: parseFloat(document.getElementById("setMinConfidence").value),
-      max_atr_pct: parseFloat(document.getElementById("setMaxAtr").value),
       max_daily_loss_pct: parseFloat(document.getElementById("setDailyLossCut").value),
       strategy_mode: document.getElementById("setStrategyMode").value,
       ai_mode: document.getElementById("setAiMode").value,
-      risk_mode: document.getElementById("setRiskMode").value,
-      excluded_tickers: document.getElementById("setExcluded").value
-        .split(",").map((s) => s.trim()).filter(Boolean),
+      excluded_tickers: document.getElementById("setExcluded").value.split(",").map(s => s.trim()).filter(Boolean),
     };
     statusEl.textContent = "저장 중...";
     try {
@@ -627,8 +630,7 @@
       if (res.status === 401) { statusEl.textContent = "인증 실패"; return; }
       const saved = await res.json();
       STATE.settings = saved;
-      document.getElementById("setExcluded").value = (saved.excluded_tickers || []).join(", ");
-      statusEl.textContent = "저장됨 · 다음 사이클부터 반영";
+      statusEl.textContent = "저장됨 · 다음 사이클 반영";
       setTimeout(() => { statusEl.textContent = ""; }, 3000);
     } catch (e) {
       statusEl.textContent = "저장 실패: " + e.message;
@@ -636,15 +638,15 @@
   }
 
   document.getElementById("saveSettingsBtn").addEventListener("click", saveSettings);
-  document.getElementById("refreshBtn").addEventListener("click", loadData);
-  document.getElementById("searchInput").addEventListener("input", (e) => {
-    STATE.search = e.target.value;
-    render();
+  document.getElementById("refreshBtn").addEventListener("click", () => {
+    loadSummary();
+    loadSettings();
   });
 
-  loadData();
+  setupTimeframeButtons();
+  loadSummary();
   loadSettings();
-  setInterval(loadData, REFRESH_MS);
+  setInterval(() => loadSummary(STATE.timeframe), REFRESH_MS);
 })();
 </script>
 </body>

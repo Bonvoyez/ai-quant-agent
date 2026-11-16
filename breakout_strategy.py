@@ -21,6 +21,7 @@ from derived_formula import calculate_breakout_score, should_enter_breakout_trad
 from exit_manager import ExitManager
 from broker import MockBroker
 from utils import atomic_write
+from trade_logger import trade_logger
 
 logger = logging.getLogger("StockReporter")
 NEW_YORK = ZoneInfo("America/New_York")
@@ -118,6 +119,9 @@ class BreakoutStrategyRunner:
             logger.error(f"Failed to persist {self.storage_file}: {e}")
 
     async def screen_and_enter(self, candidate_features: List[Dict]) -> List[str]:
+        user_settings = self.settings.load() if self.settings else {}
+        ai_mode = str(user_settings.get("ai_mode") or os.getenv("AI_MODE", "deep")).lower()
+
         valid_candidates = []
         for feat in candidate_features:
             ticker = feat.get("ticker", "UNKNOWN")
@@ -128,10 +132,17 @@ class BreakoutStrategyRunner:
         valid_candidates.sort(key=lambda x: x["score"], reverse=True)
         if not valid_candidates:
             logger.info("ℹ️ [Breakout Strategy] No candidates passed mathematical threshold today.")
+            all_items = [{"score": calculate_breakout_score(f), "ticker": f.get("ticker", "UNKNOWN"), "feat": f} for f in candidate_features]
+            trade_logger.record_screening_cycle(
+                date_str=datetime.now(NEW_YORK).strftime("%Y-%m-%d"),
+                total_universe_count=len(candidate_features),
+                all_candidates=all_items,
+                approved_candidates=[],
+                entered_ticker=None,
+                ai_mode=ai_mode,
+            )
             return []
 
-        user_settings = self.settings.load() if self.settings else {}
-        ai_mode = str(user_settings.get("ai_mode") or os.getenv("AI_MODE", "deep")).lower()
         logger.info(f"🧠 [Breakout Strategy] Active AI Intelligence Mode: [{ai_mode.upper()}] (Candidates: {len(valid_candidates)})")
 
         approved_candidates = []
@@ -245,6 +256,27 @@ class BreakoutStrategyRunner:
                 if self.telegram:
                     await self.telegram.send_message(msg)
 
+        # Record complete screening funnel and near-misses for local ML training & dashboard
+        entered_symbol = entered_tickers[0] if entered_tickers else None
+        all_items = []
+        for feat in candidate_features:
+            t = feat.get("ticker", "UNKNOWN")
+            sc = calculate_breakout_score(feat)
+            found_vc = next((vc for vc in valid_candidates if vc["ticker"] == t), None)
+            if found_vc:
+                all_items.append(found_vc)
+            else:
+                all_items.append({"score": sc, "ticker": t, "feat": feat})
+
+        trade_logger.record_screening_cycle(
+            date_str=datetime.now(NEW_YORK).strftime("%Y-%m-%d"),
+            total_universe_count=len(candidate_features),
+            all_candidates=all_items,
+            approved_candidates=approved_candidates,
+            entered_ticker=entered_symbol,
+            ai_mode=ai_mode,
+        )
+
         return entered_tickers
 
     async def run_intraday_exit_loop(self, poll_interval_seconds: int = 60):
@@ -281,6 +313,15 @@ class BreakoutStrategyRunner:
                         if sell_success:
                             del self.active_positions[ticker]
                             self._persist_positions()
+                            trade_logger.record_trade_exit(
+                                ticker=ticker,
+                                entry_price=pos.entry_price,
+                                exit_price=current_price,
+                                highest_price=pos.highest_price,
+                                exit_reason=reason,
+                                entry_time=pos.entry_time.isoformat(),
+                                exit_time=datetime.now(NEW_YORK).isoformat(),
+                            )
                             msg = (
                                 f"🏁 [Snowball Exit Executed]\n"
                                 f"• Ticker: {ticker}\n"

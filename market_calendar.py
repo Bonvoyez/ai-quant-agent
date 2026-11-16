@@ -6,7 +6,7 @@ and daylight saving time awareness without heavy external calendar dependencies.
 """
 
 from datetime import date, datetime, timedelta
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 NEW_YORK = ZoneInfo("America/New_York")
@@ -170,3 +170,138 @@ def is_trading_day(dt: Optional[datetime] = None) -> Tuple[bool, str]:
         return False, f"US Market Holiday ({holiday_name})"
 
     return True, "Regular Trading Day"
+
+
+def get_market_session_info(dt: Optional[datetime] = None) -> Dict[str, Any]:
+    """
+    Returns real-time US Equity Market session status and countdown to next event.
+    Sessions:
+    - 'REGULAR': 09:30 ~ 16:00 NY (정규장)
+    - 'PRE_MARKET': 04:00 ~ 09:30 NY (프리마켓)
+    - 'AFTER_HOURS': 16:00 ~ 20:00 NY (애프터마켓)
+    - 'CLOSED': 장마감 / 야간 대기
+    - 'HOLIDAY': 공식 공휴일 휴장
+    - 'WEEKEND': 주말 휴장
+    """
+    if dt is None:
+        dt = datetime.now(NEW_YORK)
+    elif dt.tzinfo is None:
+        dt = dt.replace(tzinfo=NEW_YORK)
+    else:
+        dt = dt.astimezone(NEW_YORK)
+
+    kst_dt = dt.astimezone(ZoneInfo("Asia/Seoul"))
+    today_ny = dt.date()
+    is_trading, status_msg = is_trading_day(dt)
+
+    def _find_next_trading_day(start_date: date) -> date:
+        curr = start_date
+        while True:
+            curr += timedelta(days=1)
+            t_dt = datetime(curr.year, curr.month, curr.day, 12, 0, tzinfo=NEW_YORK)
+            trading, _ = is_trading_day(t_dt)
+            if trading:
+                return curr
+
+    if not is_trading:
+        next_trade_date = _find_next_trading_day(today_ny)
+        next_open_dt = datetime(next_trade_date.year, next_trade_date.month, next_trade_date.day, 9, 30, tzinfo=NEW_YORK)
+        diff_sec = max(0, int((next_open_dt - dt).total_seconds()))
+        hours, rem = divmod(diff_sec, 3600)
+        mins, secs = divmod(rem, 60)
+
+        is_hol, hol_name = is_us_market_holiday(today_ny)
+        code = "HOLIDAY" if is_hol else "WEEKEND"
+        label = f"휴장일 ({hol_name})" if is_hol else f"주말 ({status_msg})"
+
+        return {
+            "session": code,
+            "session_label": label,
+            "is_regular_open": False,
+            "next_event": "정규장 개장까지",
+            "seconds_to_next": diff_sec,
+            "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
+            "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),
+            "kst_time": kst_dt.strftime("%Y-%m-%d %H:%M:%S KST"),
+        }
+
+    # Trading Day Time Boundaries (NY time)
+    t_pre_open = datetime(today_ny.year, today_ny.month, today_ny.day, 4, 0, tzinfo=NEW_YORK)
+    t_reg_open = datetime(today_ny.year, today_ny.month, today_ny.day, 9, 30, tzinfo=NEW_YORK)
+    t_reg_close = datetime(today_ny.year, today_ny.month, today_ny.day, 16, 0, tzinfo=NEW_YORK)
+    t_after_close = datetime(today_ny.year, today_ny.month, today_ny.day, 20, 0, tzinfo=NEW_YORK)
+
+    if dt < t_pre_open:
+        diff_sec = max(0, int((t_pre_open - dt).total_seconds()))
+        hours, rem = divmod(diff_sec, 3600)
+        mins, secs = divmod(rem, 60)
+        return {
+            "session": "CLOSED",
+            "session_label": "개장 전 대기",
+            "is_regular_open": False,
+            "next_event": "프리마켓 개장까지",
+            "seconds_to_next": diff_sec,
+            "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
+            "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),
+            "kst_time": kst_dt.strftime("%Y-%m-%d %H:%M:%S KST"),
+        }
+    elif t_pre_open <= dt < t_reg_open:
+        diff_sec = max(0, int((t_reg_open - dt).total_seconds()))
+        hours, rem = divmod(diff_sec, 3600)
+        mins, secs = divmod(rem, 60)
+        return {
+            "session": "PRE_MARKET",
+            "session_label": "프리마켓 진행 중",
+            "is_regular_open": False,
+            "next_event": "정규장 개장까지",
+            "seconds_to_next": diff_sec,
+            "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
+            "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),
+            "kst_time": kst_dt.strftime("%Y-%m-%d %H:%M:%S KST"),
+        }
+    elif t_reg_open <= dt < t_reg_close:
+        diff_sec = max(0, int((t_reg_close - dt).total_seconds()))
+        hours, rem = divmod(diff_sec, 3600)
+        mins, secs = divmod(rem, 60)
+        return {
+            "session": "REGULAR",
+            "session_label": "정규장 진행 중",
+            "is_regular_open": True,
+            "next_event": "정규장 마감까지",
+            "seconds_to_next": diff_sec,
+            "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
+            "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),
+            "kst_time": kst_dt.strftime("%Y-%m-%d %H:%M:%S KST"),
+        }
+    elif t_reg_close <= dt < t_after_close:
+        next_trade_date = _find_next_trading_day(today_ny)
+        next_pre_dt = datetime(next_trade_date.year, next_trade_date.month, next_trade_date.day, 4, 0, tzinfo=NEW_YORK)
+        diff_sec = max(0, int((next_pre_dt - dt).total_seconds()))
+        hours, rem = divmod(diff_sec, 3600)
+        mins, secs = divmod(rem, 60)
+        return {
+            "session": "AFTER_HOURS",
+            "session_label": "애프터마켓 진행 중",
+            "is_regular_open": False,
+            "next_event": "익일 프리마켓까지",
+            "seconds_to_next": diff_sec,
+            "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
+            "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),
+            "kst_time": kst_dt.strftime("%Y-%m-%d %H:%M:%S KST"),
+        }
+    else:  # dt >= t_after_close
+        next_trade_date = _find_next_trading_day(today_ny)
+        next_pre_dt = datetime(next_trade_date.year, next_trade_date.month, next_trade_date.day, 4, 0, tzinfo=NEW_YORK)
+        diff_sec = max(0, int((next_pre_dt - dt).total_seconds()))
+        hours, rem = divmod(diff_sec, 3600)
+        mins, secs = divmod(rem, 60)
+        return {
+            "session": "CLOSED",
+            "session_label": "정규장 및 애프터마켓 마감",
+            "is_regular_open": False,
+            "next_event": "익일 프리마켓까지",
+            "seconds_to_next": diff_sec,
+            "countdown": f"{hours:02d}:{mins:02d}:{secs:02d}",
+            "ny_time": dt.strftime("%Y-%m-%d %H:%M:%S EST/EDT"),
+            "kst_time": kst_dt.strftime("%Y-%m-%d %H:%M:%S KST"),
+        }

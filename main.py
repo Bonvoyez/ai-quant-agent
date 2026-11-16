@@ -50,7 +50,7 @@ async def main() -> None:
         scheduler.telegram.configure(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
         scheduler.ai.configure(LLM_BASE_URL, LLM_API_KEY, LLM_MODEL)
 
-        dashboard_app = create_dashboard_app()
+        dashboard_app = create_dashboard_app(scheduler=scheduler)
         runner = web.AppRunner(dashboard_app)
         await runner.setup()
         dashboard_port = int(os.getenv("DASHBOARD_PORT", "8899"))
