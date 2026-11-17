@@ -156,12 +156,11 @@
           <div>
             <div class="kpi-label">Available Cash (Buying Power)</div>
             <div class="display" style="font-size:26px;font-weight:700;" id="accBalanceUsd">$0.00 USD</div>
-            <div class="mono" style="font-size:12px;color:var(--muted);margin-top:2px;" id="accBalanceKrw">≈ ₩0 KRW</div>
           </div>
           <div style="text-align:right;">
             <div class="kpi-label">Broker Interface</div>
             <div class="mono" style="font-size:11px;color:var(--pos);" id="accConnectStatus">Toss OpenAPI Connected</div>
-            <div class="mono" style="font-size:10px;color:var(--muted-dim);margin-top:2px;">Rate: 1 USD ≈ ₩1,360</div>
+            <div class="mono" style="font-size:10px;color:var(--muted-dim);margin-top:2px;">Currency: USD Native</div>
           </div>
         </div>
       </div>
@@ -427,7 +426,6 @@
   function updateAccountBox(acc) {
     if (!acc) return;
     document.getElementById("accBalanceUsd").textContent = `$${acc.balance_usd.toFixed(2)} USD`;
-    document.getElementById("accBalanceKrw").textContent = `≈ ₩${acc.balance_krw.toLocaleString('en-US')} KRW`;
 
     const modeBadge = document.getElementById("accModeBadge");
     if (acc.is_dry_run) {
