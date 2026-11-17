@@ -289,14 +289,21 @@ class BreakoutStrategyRunner:
         try:
             while self._monitoring_active and self.active_positions:
                 for ticker, pos in list(self.active_positions.items()):
-                    current_price = await self.broker.get_realtime_price(ticker)
-                    if not current_price or current_price <= 0:
-                        continue
+                    try:
+                        current_price = await self.broker.get_realtime_price(ticker)
+                    except Exception as pe:
+                        logger.debug(f"Price fetch failed for {ticker}: {pe}")
+                        current_price = None
 
-                    pos.current_price = current_price
-                    if current_price > pos.highest_price:
-                        pos.highest_price = current_price
-                    self._persist_positions()
+                    # If live quote fails (e.g. market closed), fallback to last known price so EOD exit can still trigger
+                    if not current_price or current_price <= 0:
+                        current_price = pos.current_price if pos.current_price > 0 else pos.entry_price
+
+                    if current_price > 0:
+                        pos.current_price = current_price
+                        if current_price > pos.highest_price:
+                            pos.highest_price = current_price
+                        self._persist_positions()
 
                     action, ratio, reason = pos.exit_manager.evaluate_exit(
                         entry_price=pos.entry_price,
@@ -304,15 +311,20 @@ class BreakoutStrategyRunner:
                         highest_price_since_entry=pos.highest_price,
                     )
 
-                    # Pure Day-Trading EOD Rule: Liquidate any open position before market close (15:50~16:00 EST)
-                    # or immediately at market open if held from a previous session.
+                    # Pure Day-Trading EOD Rule:
+                    # 1. Any time on or after 15:50 EST on entry date (market close)
+                    # 2. ANY subsequent calendar day (leftover must be cleared immediately)
                     now_ny = datetime.now(NEW_YORK)
-                    is_eod_window = (now_ny.hour == 15 and now_ny.minute >= 50 and now_ny.minute <= 59)
-                    is_leftover = (pos.entry_time.date() < now_ny.date() and (now_ny.hour > 9 or (now_ny.hour == 9 and now_ny.minute >= 30)))
-                    if action != "SELL" and (is_eod_window or is_leftover):
+                    is_after_market_close = (
+                        pos.entry_time.date() == now_ny.date()
+                        and (now_ny.hour > 15 or (now_ny.hour == 15 and now_ny.minute >= 50))
+                    )
+                    is_subsequent_day = (pos.entry_time.date() < now_ny.date())
+
+                    if action != "SELL" and (is_after_market_close or is_subsequent_day):
                         action = "SELL"
                         ratio = 1.0
-                        reason = "EOD_MARKET_CLOSE_EXIT (Pure Day-Trading Liquidation)" if is_eod_window else "OVERNIGHT_LEFTOVER_EXIT (Pure Day-Trading Liquidation)"
+                        reason = "EOD_MARKET_CLOSE_EXIT (Pure Day-Trading Liquidation)"
 
                     if action == "SELL":
                         curr_ret = ((current_price - pos.entry_price) / pos.entry_price) * 100.0
@@ -350,6 +362,8 @@ class BreakoutStrategyRunner:
                 await asyncio.sleep(poll_interval_seconds)
         except asyncio.CancelledError:
             logger.info("🛑 [Snowball Strategy] Exit loop cancelled.")
+        except Exception as loop_err:
+            logger.exception(f"Unexpected error in intraday exit loop: {loop_err}")
         finally:
             self._monitoring_active = False
 
