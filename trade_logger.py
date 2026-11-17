@@ -306,7 +306,35 @@ class TradeDatasetLogger:
         except Exception as e:
             logger.error(f"Failed to update {TRADE_HISTORY_FILE}: {e}")
 
-        # 2. Update Ground-Truth label in training parquet if present
+        # 2. Update Ground-Truth Outcome in screening_history.json
+        try:
+            date_str = entry_time[:10]
+            if SCREENING_FILE.exists():
+                with open(SCREENING_FILE, "r", encoding="utf-8") as sf:
+                    s_history = json.load(sf)
+                if isinstance(s_history, list):
+                    for cycle in s_history:
+                        if cycle.get("date") == date_str:
+                            cycle["entered_ticker"] = ticker
+                            cycle["outcome"] = "WIN" if is_win else "LOSS"
+                            cycle["realized_return_pct"] = ret_pct
+                            cycle["exit_price"] = round(exit_price, 4)
+                            cycle["highest_price"] = round(highest_price, 4)
+                            cycle["exit_reason"] = exit_reason
+
+                            for nm in cycle.get("near_misses", []):
+                                if nm.get("ticker") == ticker:
+                                    nm["status"] = "APPROVED_ENTERED"
+                                    nm["realized_return_pct"] = ret_pct
+                                    nm["outcome"] = "WIN" if is_win else "LOSS"
+                                    nm["exit_price"] = round(exit_price, 4)
+                                    nm["highest_price"] = round(highest_price, 4)
+                                    nm["exit_reason"] = exit_reason
+                    atomic_write(str(SCREENING_FILE), s_history)
+        except Exception as e:
+            logger.error(f"Failed to update screening history with trade outcome: {e}")
+
+        # 3. Update Ground-Truth label in training parquet if present
         try:
             date_str = entry_time[:10]
             if TRAINING_PARQUET.exists():

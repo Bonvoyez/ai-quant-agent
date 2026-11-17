@@ -12,6 +12,7 @@ logger = logging.getLogger("StockReporter")
 
 DASHBOARD_TOKEN = os.getenv("DASHBOARD_TOKEN", "")
 DASHBOARD_HTML_PATH = Path(__file__).parent / "dashboard.html"
+BACKTEST_HTML_PATH = Path(__file__).parent / "visualize_backtest.html"
 HISTORY_FILE = "history.json"
 ACTIVE_TRADES_FILE = "active_trades.json"
 POSITIONS_FILE = "breakout_positions.json"
@@ -138,6 +139,12 @@ async def handle_dashboard(request: web.Request) -> web.Response:
     return web.FileResponse(DASHBOARD_HTML_PATH)
 
 
+async def handle_backtest(request: web.Request) -> web.Response:
+    if not BACKTEST_HTML_PATH.exists():
+        return web.Response(text="visualize_backtest.html not found.", status=404)
+    return web.FileResponse(BACKTEST_HTML_PATH)
+
+
 async def handle_health(request: web.Request) -> web.Response:
     return web.json_response({"status": "ok"})
 
@@ -153,6 +160,7 @@ def create_dashboard_app(scheduler=None) -> web.Application:
     app.router.add_get("/api/settings", handle_get_settings)
     app.router.add_post("/api/settings", handle_post_settings)
     app.router.add_get("/dashboard", handle_dashboard)
+    app.router.add_get("/backtest", handle_backtest)
     app.router.add_get("/", handle_dashboard)
     app.router.add_get("/health", handle_health)
     return app
