@@ -117,7 +117,7 @@ This system is built from the ground up with enterprise-grade defensive security
 ```
 ai-quant-agent/
 ├── .github/workflows/ci.yml   # Automated CI Pipeline (Ruff + Pytest)
-├── tests/                     # Comprehensive unit test suite (27 unit tests)
+├── tests/                     # Comprehensive unit test suite (28 unit tests)
 │   ├── test_ai_intelligence.py
 │   ├── test_analytics_and_logging.py
 │   ├── test_breakout_strategy.py

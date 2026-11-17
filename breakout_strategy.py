@@ -208,15 +208,19 @@ class BreakoutStrategyRunner:
 
             logger.info(f"🎯 [Snowball Top Pick] {ticker} - Formula Score: {score:.2f}")
 
+            dry_run = os.getenv("ROTATION_DRY_RUN", "1") != "0"
+            cap_env = float(os.getenv("ROTATION_CAPITAL_CAP_USD", "0") or 0)
+
             balance = await self.broker.get_balance()
+            if dry_run and balance < 10.0:
+                # Provide standard paper trading simulated capital in dry-run mode
+                balance = cap_env if cap_env > 0 else 500.0
+
             if balance < 10.0:
                 logger.warning(f"⚠️ Insufficient balance (${balance:.2f}) to enter {ticker}")
                 continue
 
-            dry_run = os.getenv("ROTATION_DRY_RUN", "1") != "0"
-            cap_env = float(os.getenv("ROTATION_CAPITAL_CAP_USD", "0") or 0)
             effective_balance = min(balance, cap_env) if cap_env > 0 else balance
-
             available_slots = max(1, self.max_positions - len(self.active_positions))
             budget = effective_balance / available_slots
             current_price = await self.broker.get_realtime_price(ticker)
@@ -225,7 +229,7 @@ class BreakoutStrategyRunner:
                 continue
 
             if dry_run and not isinstance(self.broker, MockBroker):
-                logger.info(f"🧪 [DRY RUN] 가상 매수 집행: BUY {ticker} (${budget:.2f} @ ${current_price:.2f})")
+                logger.info(f"🧪 [DRY RUN] Simulated BUY executed: BUY {ticker} (${budget:.2f} @ ${current_price:.2f})")
                 buy_success = True
             else:
                 buy_success = await self.broker.buy_market_order(ticker, budget)
@@ -331,7 +335,7 @@ class BreakoutStrategyRunner:
                         logger.info(f"🚨 [Exit Triggered] {ticker} - Reason: {reason} | Return: {curr_ret:.2f}%")
                         dry_run = os.getenv("ROTATION_DRY_RUN", "1") != "0"
                         if dry_run and not isinstance(self.broker, MockBroker):
-                            logger.info(f"🧪 [DRY RUN] 가상 매도 집행: SELL {ticker} ({curr_ret:+.2f}%)")
+                            logger.info(f"🧪 [DRY RUN] Simulated SELL executed: SELL {ticker} ({curr_ret:+.2f}%)")
                             sell_success = True
                         else:
                             sell_success = await self.broker.sell_market_order(ticker)

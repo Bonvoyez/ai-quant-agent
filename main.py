@@ -90,7 +90,7 @@ async def main() -> None:
             now_ny = datetime.now(NEW_YORK).strftime("%Y-%m-%d %H:%M:%S EST")
             
             dash_token = os.getenv("DASHBOARD_TOKEN", "")
-            base_url = "https://danieljheo.duckdns.org"
+            base_url = os.getenv("DASHBOARD_PUBLIC_URL", "https://danieljheo.duckdns.org")
             dash_url = f"{base_url}/?token={dash_token}" if dash_token else base_url
 
             await telegram.send_message(

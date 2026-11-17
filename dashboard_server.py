@@ -39,20 +39,20 @@ def _read_json_file(path: str):
         with open(p, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
-        logger.error(f"❌ 대시보드용 파일 읽기 실패 ({path}): {e}")
+        logger.error(f"❌ Failed to read dashboard storage file ({path}): {e}")
         return []
 
 
 async def handle_history(request: web.Request) -> web.Response:
     if not _check_token(request):
-        logger.warning(f"🚫 대시보드 API 인증 실패 (history) - IP: {request.remote}")
+        logger.warning(f"🚫 Dashboard API auth failed (history) - IP: {request.remote}")
         return web.json_response({"error": "unauthorized"}, status=401)
     return web.json_response(_read_json_file(HISTORY_FILE))
 
 
 async def handle_active_trades(request: web.Request) -> web.Response:
     if not _check_token(request):
-        logger.warning(f"🚫 대시보드 API 인증 실패 (active_trades) - IP: {request.remote}")
+        logger.warning(f"🚫 Dashboard API auth failed (active_trades) - IP: {request.remote}")
         return web.json_response({"error": "unauthorized"}, status=401)
     return web.json_response(_read_json_file(ACTIVE_TRADES_FILE))
 
@@ -64,12 +64,9 @@ async def handle_get_settings(request: web.Request) -> web.Response:
 
 
 async def handle_post_settings(request: web.Request) -> web.Response:
-    """
-    [신규] 대시보드에서 보낸 설정을 저장합니다. 이 값은 scheduler.py가 다음
-    사이클 시작 시 읽어서 실제 매매 파라미터와 AI 프롬프트에 반영합니다.
-    """
+    """Updates dashboard settings."""
     if not _check_token(request):
-        logger.warning(f"🚫 대시보드 설정 변경 인증 실패 - IP: {request.remote}")
+        logger.warning(f"🚫 Dashboard settings update auth failed - IP: {request.remote}")
         return web.json_response({"error": "unauthorized"}, status=401)
     try:
         body = await request.json()
@@ -81,7 +78,7 @@ async def handle_post_settings(request: web.Request) -> web.Response:
 
 async def handle_summary(request: web.Request) -> web.Response:
     if not _check_token(request):
-        logger.warning(f"🚫 대시보드 API 인증 실패 (summary) - IP: {request.remote}")
+        logger.warning(f"🚫 Dashboard API auth failed (summary) - IP: {request.remote}")
         return web.json_response({"error": "unauthorized"}, status=401)
     
     timeframe = request.query.get("timeframe", "all")
@@ -137,7 +134,7 @@ async def handle_summary(request: web.Request) -> web.Response:
 
 async def handle_dashboard(request: web.Request) -> web.Response:
     if not DASHBOARD_HTML_PATH.exists():
-        return web.Response(text="dashboard.html 파일을 찾을 수 없습니다. 같은 폴더에 배치했는지 확인하세요.", status=500)
+        return web.Response(text="dashboard.html not found. Ensure it is placed in the project root directory.", status=500)
     return web.FileResponse(DASHBOARD_HTML_PATH)
 
 

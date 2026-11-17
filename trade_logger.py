@@ -82,18 +82,18 @@ def calculate_criteria_proximity(feat: Dict[str, Any]) -> Dict[str, Any]:
 
     miss_reasons = []
     if is_toxic:
-        miss_reasons.append("유상증자/CB 악재 감지 (Toxic Dilution)")
+        miss_reasons.append("Toxic Dilution (S-3/CB offering risk)")
     if gap_sat < 100.0:
         if gap > 4.0:
-            miss_reasons.append(f"갭상승 과열 (+{gap:.1f}% > 기준 +4.0%)")
+            miss_reasons.append(f"Overextended Gap (+{gap:.1f}% > +4.0% limit)")
         else:
-            miss_reasons.append(f"시초가 갭 부족 ({gap:+.1f}%)")
+            miss_reasons.append(f"Insufficient Gap ({gap:+.1f}%)")
     if atr_sat < 100.0:
-        miss_reasons.append(f"일간 변동폭(ATR) 미달 ({atr:.1f}% < 기준 7.0%)")
+        miss_reasons.append(f"Low Volatility ATR ({atr:.1f}% < 7.0% threshold)")
     if rvol_sat < 100.0:
-        miss_reasons.append(f"상대 거래량(RVOL) 부족 ({rvol:.2f}x < 기준 1.2x)")
+        miss_reasons.append(f"Relative Volume (RVOL) Shortfall ({rvol:.2f}x < 1.20x)")
     if fact_sat < 100.0:
-        miss_reasons.append(f"공시/카탈리스트 강도 부족 ({fact:.2f} < 기준 0.25)")
+        miss_reasons.append(f"Catalyst Strength Shortfall ({fact:.2f} < 0.25)")
 
     if is_toxic:
         overall_proximity = min(40.0, (gap_sat + atr_sat + rvol_sat + fact_sat) / 4.0 * 0.4)

@@ -52,7 +52,7 @@ def test_criteria_proximity_calculation():
     }
     prox_toxic = calculate_criteria_proximity(feat_toxic)
     assert prox_toxic["proximity_score"] <= 40.0
-    assert any("유상증자" in r for r in prox_toxic["miss_reasons"])
+    assert any("Toxic Dilution" in r for r in prox_toxic["miss_reasons"])
 
 
 def test_trade_logger_pipeline(tmp_path, monkeypatch):
