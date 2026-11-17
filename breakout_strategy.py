@@ -121,7 +121,68 @@ class BreakoutStrategyRunner:
         except Exception as e:
             logger.error(f"Failed to persist {self.storage_file}: {e}")
 
+    async def flush_stale_positions(self) -> List[str]:
+        """
+        Pre-flight Safeguard:
+        If any position from a prior day remains (due to previous-day broker timeout, network blip, or halt),
+        force-liquidate it immediately BEFORE screening and buying so cash is 100% recovered for today's pick.
+        """
+        now_ny = datetime.now(NEW_YORK)
+        today = now_ny.date()
+        flushed = []
+        for ticker, pos in list(self.active_positions.items()):
+            if pos.entry_time.date() < today:
+                logger.warning(
+                    f"🚨 [Stale Overnight Position] {ticker} from {pos.entry_time.date()} held into {today}. "
+                    f"Force-liquidating immediately to release capital..."
+                )
+                try:
+                    current_price = await self.broker.get_realtime_price(ticker)
+                except Exception:
+                    current_price = pos.current_price or pos.entry_price
+
+                if not current_price or current_price <= 0:
+                    current_price = pos.current_price or pos.entry_price
+
+                dry_run = os.getenv("ROTATION_DRY_RUN", "1") != "0"
+                if dry_run and not isinstance(self.broker, MockBroker):
+                    logger.info(f"🧪 [DRY RUN] Force-liquidated stale position {ticker} at ${current_price:.2f}")
+                    sell_success = True
+                else:
+                    sell_success = await self.broker.sell_market_order(ticker)
+
+                if sell_success:
+                    del self.active_positions[ticker]
+                    self._persist_positions()
+                    trade_logger.record_trade_exit(
+                        ticker=ticker,
+                        entry_price=pos.entry_price,
+                        exit_price=current_price,
+                        highest_price=pos.highest_price,
+                        exit_reason="STALE_OVERNIGHT_FORCE_LIQUIDATION",
+                        entry_time=pos.entry_time.isoformat(),
+                        exit_time=now_ny.isoformat(),
+                    )
+                    flushed.append(ticker)
+                    if self.telegram:
+                        curr_ret = ((current_price - pos.entry_price) / pos.entry_price) * 100.0 if pos.entry_price > 0 else 0.0
+                        await self.telegram.send_message(
+                            f"🧹 [Pre-Market Capital Flush]\n"
+                            f"• Ticker: {ticker}\n"
+                            f"• Reason: Previous day leftover liquidated to free 100% cash for today's trade.\n"
+                            f"• PnL: {curr_ret:+.2f}%\n"
+                            f"• Capital 100% ready for new runner."
+                        )
+
+        if flushed:
+            # Short sleep to allow broker balance update
+            await asyncio.sleep(2.0)
+        return flushed
+
     async def screen_and_enter(self, candidate_features: List[Dict]) -> List[str]:
+        # Pre-flight safeguard: Always flush any stale positions from previous days before screening or buying
+        await self.flush_stale_positions()
+
         user_settings = self.settings.load() if self.settings else {}
         ai_mode = str(user_settings.get("ai_mode") or os.getenv("AI_MODE", "deep")).lower()
 

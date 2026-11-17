@@ -126,3 +126,52 @@ async def test_snowball_eod_market_close_exit(monkeypatch, tmp_path):
     # Should have liquidated due to leftover / pure day-trade EOD rule
     assert "UPXI" not in runner.active_positions
     assert any(o[0] == "SELL" and o[1] == "UPXI" for o in broker.orders)
+
+
+@pytest.mark.asyncio
+async def test_flush_stale_positions_before_new_screening(monkeypatch, tmp_path):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from breakout_strategy import ActivePosition
+    from exit_manager import ExitManager
+
+    monkeypatch.setenv("ROTATION_DRY_RUN", "0")
+    storage_file = str(tmp_path / "test_stale_flush.json")
+    broker = DummyBroker()
+    broker.prices["OLD"] = 10.0
+    broker.prices["NEW"] = 5.0
+    tg = DummyTelegramService()
+    runner = BreakoutStrategyRunner(broker, tg, score_threshold=15.0, max_positions=1, storage_file=storage_file)
+
+    # Manually inject a stale position from yesterday
+    old_time = datetime(2026, 11, 10, 10, 0, tzinfo=ZoneInfo("America/New_York"))
+    runner.active_positions["OLD"] = ActivePosition(
+        ticker="OLD",
+        entry_price=10.0,
+        highest_price=10.0,
+        entry_time=old_time,
+        exit_manager=ExitManager(),
+    )
+    runner._persist_positions()
+
+    # Now screen and enter today's new candidate
+    new_candidate = {
+        "ticker": "NEW",
+        "fact_score": 0.8,
+        "atr_pct": 12.0,
+        "rvol_prev": 2.5,
+        "gap_open_pct": 2.0,
+        "bb_width": 45.0,
+        "is_toxic_material": 0.0,
+    }
+
+    entered = await runner.screen_and_enter([new_candidate])
+
+    # 1. Stale position OLD must be sold
+    assert "OLD" not in runner.active_positions
+    assert any(o[0] == "SELL" and o[1] == "OLD" for o in broker.orders)
+
+    # 2. Today's candidate NEW must be successfully entered
+    assert "NEW" in entered
+    assert "NEW" in runner.active_positions
+    assert any(o[0] == "BUY" and o[1] == "NEW" for o in broker.orders)
