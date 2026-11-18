@@ -173,4 +173,11 @@ async def test_dashboard_summary_api(monkeypatch):
     assert "equity_curve" in data
     assert "screening" in data
 
+    # Test preflight API
+    res_pref = await client.get("/api/preflight?token=test_sec_token")
+    assert res_pref.status == 200
+    p_data = await res_pref.json()
+    assert "is_trading_day" in p_data
+    assert "verdict" in p_data
+
     await client.close()

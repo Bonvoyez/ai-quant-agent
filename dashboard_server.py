@@ -149,6 +149,15 @@ async def handle_health(request: web.Request) -> web.Response:
     return web.json_response({"status": "ok"})
 
 
+async def handle_preflight(request: web.Request) -> web.Response:
+    if not _check_token(request):
+        logger.warning(f"🚫 Dashboard API auth failed (preflight) - IP: {request.remote}")
+        return web.json_response({"error": "unauthorized"}, status=401)
+    from preflight_check import get_preflight_status_dict
+    data = await get_preflight_status_dict()
+    return web.json_response(data)
+
+
 def create_dashboard_app(scheduler=None) -> web.Application:
     app = web.Application()
     if scheduler is not None:
@@ -159,6 +168,7 @@ def create_dashboard_app(scheduler=None) -> web.Application:
     app.router.add_get("/api/active-trades", handle_active_trades)
     app.router.add_get("/api/settings", handle_get_settings)
     app.router.add_post("/api/settings", handle_post_settings)
+    app.router.add_get("/api/preflight", handle_preflight)
     app.router.add_get("/dashboard", handle_dashboard)
     app.router.add_get("/backtest", handle_backtest)
     app.router.add_get("/", handle_dashboard)

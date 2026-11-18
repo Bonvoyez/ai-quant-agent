@@ -557,9 +557,9 @@ class DailyScheduler:
                         last_s_date = s_records[-1].get("date")
                         if last_s_date and (not last_run_date or last_s_date > last_run_date):
                             last_run_date = last_s_date
-                        # If today's screening cycle is already recorded, lock it immediately
+                        # If today's screening cycle is already recorded with real full-universe scan, lock it
                         for s_rec in s_records:
-                            if s_rec.get("date") == today_ny:
+                            if s_rec.get("date") == today_ny and s_rec.get("counts", {}).get("scanned_universe", 0) > 10:
                                 last_run_date = today_ny
                                 logger.info(f"⚡ [Token Optimization] Screening for today ({today_ny}) already completed. Restoring monitoring quietly.")
                                 break
@@ -584,8 +584,17 @@ class DailyScheduler:
                 f"🛡️ [Crash Recovery] Detected {len(active_symbols)} open breakout position(s) from disk: "
                 f"{', '.join(active_symbols)}. Resuming real-time intraday exit monitoring quietly without re-sending reports."
             )
-            # If we are already holding open positions on startup, do not re-screen or re-audit today
-            last_run_date = today_ny
+            # Only lock today if the open positions were entered TODAY.
+            # If all open positions are stale leftovers from prior days, today has NOT traded yet!
+            entered_today = any(
+                pos.entry_time.date() == now_ny_dt.date()
+                for pos in self.breakout_runner.active_positions.values()
+            )
+            if entered_today:
+                last_run_date = today_ny
+                logger.info(f"🛡️ Position already entered today ({today_ny}). Setting last_run_date to today.")
+            else:
+                logger.info(f"🛡️ Active position is an overnight leftover from a prior date. Today ({today_ny}) remains eligible to trade after flush.")
             asyncio.create_task(self.breakout_runner.run_intraday_exit_loop())
 
         while True:
@@ -623,15 +632,20 @@ class DailyScheduler:
                         try:
                             logger.info("🚀 [Breakout Strategy] Pre-market screening & autonomous execution triggered.")
                             runner = self.breakout_runner
-                            # candidate features will be gathered via pre-market data
                             candidates = await self.market.get_breakout_candidates_premarket() if hasattr(self.market, "get_breakout_candidates_premarket") else []
-                            if candidates:
-                                await runner.screen_and_enter(candidates)
+                            if not candidates:
+                                logger.warning("⚠️ [Breakout Scanner] Candidate scanner returned 0 items (feed delayed). Retrying in 30s...")
+                                await asyncio.sleep(30)
+                                continue
+
+                            entered = await runner.screen_and_enter(candidates)
+                            if runner.active_positions:
                                 asyncio.create_task(runner.run_intraday_exit_loop())
+                            last_run_date = today_str
                         except Exception as breakout_error:
                             logger.exception("Breakout cycle failed")
                             await self.telegram.send_message(f"⚠️ [Breakout Strategy Error] {breakout_error}")
-                        last_run_date = today_str
+                            last_run_date = today_str
                         continue
                     # 주문 판단 전에 실계좌를 한 번 기준점으로 삼는다. 수동 매도 뒤에
                     # 오래된 로컬 기록 때문에 재매도를 시도하는 일을 막는다.
