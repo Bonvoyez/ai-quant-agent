@@ -83,7 +83,7 @@ An asynchronous, broker-agnostic quantitative trading and portfolio management p
 
 ### 4. Interactive Monitoring & Analytics Dashboard (`dashboard.html`)
 - **Real-Time Market Pulse**: Dynamic session status badge (REGULAR, PRE_MARKET, CLOSED, HOLIDAY) with live second-by-second countdown to open/close events.
-- **Account Capital & Sentinel Widget**: Real-time available buying power (USD & KRW) and live active position tracking with real-time price monitoring.
+- **Account Capital & Sentinel Widget**: Real-time available buying power ($USD Native) and live active position tracking with real-time price monitoring.
 - **Clean SVG Line Chart**: Zero-dependency minimalist vector equity curve with instant timeframe switching (Today, 1W, 1M, 1Y, All).
 - **Criteria Proximity Funnel**: Visualizes today's screening funnel and reveals the top near-miss stocks with exact miss reasons.
 
@@ -176,8 +176,10 @@ cp .env.example .env
 ### 4. Running the Platform
 
 ```bash
-# 1. End-to-End System Doctor (Live health check across all 6 subsystems in < 5s)
-python cli.py --doctor
+# 1. Full-Spectrum System Health & Pre-Flight Readiness Auditor (< 4s)
+python doctor.py
+# (or equivalent alias)
+python preflight_check.py
 
 # 2. Paper Trading Simulation (Zero credentials required, 100% offline demonstration)
 python cli.py --mode paper --dry-run
@@ -189,14 +191,23 @@ python cli.py --mode breakout --live-orders
 python main.py
 ```
 
+### 5. Pre-Flight Readiness & Diagnostic Suite (`doctor.py` / `preflight_check.py`)
+Run `python doctor.py` at any time to run a 6-phase live audit before the market opens:
+1. **Network, Market Calendar & DST Engine**: NYC vs KST clock verification, market holiday status, next opening/closing event.
+2. **Quantitative Formula Engine**: Validates the closed-form momentum scoring and toxic material sieve.
+3. **Broker Layer & Purchasing Power**: Live Toss OpenAPI token & balance query or virtual MockBroker buffer verification.
+4. **Telemetry & Alerts**: Live Telegram bot and AI reasoning endpoint ping test.
+5. **Scheduler Execution Lock & Stale Position Audit**: Verifies that today's trading loop is `UNLOCKED`, ensures overnight stale positions are marked for automatic market-open flushing, and prevents premature locks.
+6. **Live 161-Ticker Momentum Scanner & Top 5 Rankings**: Downloads live quotes across all 161 nanocap momentum tickers, applies the Gold Standard criteria (Gap 0~4%, ATR >= 7%, RVOL >= 1.2x), displays the Top 5 ranked candidates with explicit Pass/Fail reasons, and prints the leading target (e.g. `DDD`).
+
 ---
 
 ## Testing & Quality Assurance
 
-All core modules are verified through automated unit tests and strict static analysis:
+All core modules are verified through automated unit tests with strict test-data isolation (`tests/conftest.py`), guaranteeing zero contamination of production logs and state files:
 
 ```bash
-# Run full unit test suite
+# Run full unit test suite (29 tests passing)
 pytest -v tests/
 
 # Run Ruff linter
