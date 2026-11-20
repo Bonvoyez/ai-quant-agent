@@ -124,22 +124,30 @@ class AIClient:
             return self._audit_cache[cache_key]
 
         system_instruction = (
-            "You are an elite quantitative hedge fund risk officer and SEC auditor for US small-cap equities. "
-            "Your job is to protect capital from toxic dilution, reverse splits, and pump-and-dump traps. "
-            "Always search real-time live SEC filings (EDGAR 8-K, S-3, 424B) and news from the last 48 hours. "
+            "You are a pragmatic quantitative hedge fund execution officer auditing US small-cap momentum runners. "
+            "Your sole objective is to filter out FATAL, ACTIVE capital-destruction events announced within the last 48 hours. "
+            "Understand that 95% of small-caps are unprofitable and have historical shelf registrations or warrants—do NOT reject solely for past balance sheet debt, historical warrants, or general quarterly losses. "
+            "ONLY reject ('REJECTED' / 'HIGH') if there is an active, immediate toxic trap: "
+            "(1) A newly announced priced public/direct offering or ATM share dump within the last 48 hours, "
+            "(2) An effective reverse-split today, or "
+            "(3) An imminent bankruptcy/delisting liquidation. "
+            "If volume is driven by a genuine contract, FDA update, partnership, or retail momentum squeeze without an active 48h offering dump, mark APPROVED with dilution_risk: LOW or MODERATE. "
             "Reply strictly in valid JSON format."
         )
 
         user_prompt = f"""
-Audit US equity ticker: ${ticker}
+Audit US small-cap equity: ${ticker}
 Pre-Market Gap: {candidate_info.get('gap_open_pct', 0.0):+.2f}%
 Relative Volume (RVOL): {candidate_info.get('rvol_prev', 1.0):.2f}x
 ATR Volatility: {candidate_info.get('atr_pct', 5.0):.2f}%
 
-Perform a deep real-time audit:
-1. SEC Filings (last 48 hours): Are there ANY offerings (S-1/S-3), warrants, convertible notes, or toxic dilution?
-2. Catalyst Verification: What is the exact fundamental news driving volume today? Is it genuine or empty hype?
-3. Squeeze/Social: Is there elevated short interest or strong retail social momentum?
+Audit for ACTIVE toxic dilution vs legitimate momentum:
+1. Active 48h Offerings: Did the company price or announce a brand-new public offering, direct offering, or ATM share sale within the LAST 48 HOURS that is currently dumping on the market? (Ignore routine shelf S-3 filings from months ago).
+2. Reverse Split / Delisting: Is there a reverse stock split effective today or immediate Chapter 11 filing?
+3. Catalyst & Squeeze: What is driving today's volume? Is there a legitimate catalyst or short squeeze momentum?
+
+Standard Small-Cap Rule:
+- Past debt, historical warrants, routine net losses, or existing inactive shelf registrations are EXPECTED in micro-caps. Do NOT reject unless there is an ACTIVE 48-hour offering dilution or liquidation trap.
 
 Return ONLY this JSON structure:
 {{
@@ -148,14 +156,17 @@ Return ONLY this JSON structure:
   "dilution_risk": "LOW" or "HIGH",
   "catalyst_strength": "STRONG" or "MODERATE" or "WEAK",
   "fact_score": 0.0 to 1.0,
-  "summary": "Concise 2-sentence summary of the news and SEC status",
-  "risk_flags": ["list of any red flags, e.g., ATM offering filed yesterday"]
+  "summary": "Concise 2-sentence summary of catalyst and 48h SEC status",
+  "risk_flags": ["list of active fatal red flags if any"]
 }}
 """
         try:
             raw = await self.fetch_raw_analysis(system_instruction, user_prompt)
             data = self.parse_json_response(raw)
-            is_safe = (data.get("recommendation") == "APPROVED") and not (data.get("dilution_risk") == "HIGH")
+            rec = str(data.get("recommendation", "APPROVED")).upper()
+            dilution = str(data.get("dilution_risk", "LOW")).upper()
+            # Mark unsafe ONLY if explicitly REJECTED or active HIGH dilution trap
+            is_safe = (rec == "APPROVED") and (dilution != "HIGH")
             audit_result = {
                 "is_safe": is_safe,
                 "recommendation": "APPROVED" if is_safe else "REJECTED",

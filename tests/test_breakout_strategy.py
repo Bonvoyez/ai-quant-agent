@@ -175,3 +175,63 @@ async def test_flush_stale_positions_before_new_screening(monkeypatch, tmp_path)
     assert "NEW" in entered
     assert "NEW" in runner.active_positions
     assert any(o[0] == "BUY" and o[1] == "NEW" for o in broker.orders)
+
+
+@pytest.mark.asyncio
+async def test_screening_history_recorded_when_ai_rejects_all(monkeypatch, tmp_path):
+    import json
+    import trade_logger
+
+    class DummyToxicAI:
+        is_configured = True
+        async def deep_audit_candidate(self, ticker, feat):
+            return {
+                "is_safe": False,
+                "recommendation": "REJECTED",
+                "risk_flags": ["Active 48h offering trap"],
+                "summary": "Toxic dilution detected."
+            }
+
+    monkeypatch.setenv("ROTATION_DRY_RUN", "1")
+    monkeypatch.setenv("AI_MODE", "deep")
+    storage_file = str(tmp_path / "test_positions_ai_rej.json")
+    broker = DummyBroker()
+    tg = DummyTelegramService()
+    runner = BreakoutStrategyRunner(
+        broker,
+        tg,
+        ai_client=DummyToxicAI(),
+        score_threshold=15.0,
+        max_positions=1,
+        storage_file=storage_file
+    )
+
+    candidate = {
+        "ticker": "TRAP",
+        "fact_score": 0.8,
+        "atr_pct": 12.0,
+        "rvol_prev": 2.5,
+        "gap_open_pct": 2.0,
+        "bb_width": 45.0,
+        "is_toxic_material": 0.0,
+    }
+
+    entered = await runner.screen_and_enter([candidate])
+
+    # 1. Must return empty list because AI rejected TRAP
+    assert entered == []
+    assert len(runner.active_positions) == 0
+
+    # 2. Telegram warning must be sent
+    assert any("AI Sentinel Capital Protection" in m for m in tg.messages)
+
+    # 3. screening_history.json MUST exist and have recorded the cycle
+    screening_file = trade_logger.SCREENING_FILE
+    assert screening_file.exists()
+    with open(screening_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        assert len(data) >= 1
+        last_rec = data[-1]
+        assert last_rec["entered_ticker"] is None
+        assert last_rec["counts"]["ai_rejected_traps"] == 1
+        assert last_rec["counts"]["ai_approved"] == 0

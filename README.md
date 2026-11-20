@@ -207,7 +207,7 @@ Run `python doctor.py` at any time to run a 6-phase live audit before the market
 All core modules are verified through automated unit tests with strict test-data isolation (`tests/conftest.py`), guaranteeing zero contamination of production logs and state files:
 
 ```bash
-# Run full unit test suite (29 tests passing)
+# Run full unit test suite (30 tests passing)
 pytest -v tests/
 
 # Run Ruff linter

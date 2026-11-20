@@ -247,10 +247,21 @@ class BreakoutStrategyRunner:
 
         top_picks = approved_candidates[: self.max_positions]
         if not top_picks:
-            return []
+            logger.info("ℹ️ [Breakout Strategy] 0 candidates approved for execution today. Recording screening audit to disk.")
+            if self.telegram:
+                rejected_names = [item["ticker"] for item in valid_candidates if item.get("ai_audit") and not item["ai_audit"].get("is_safe", True)]
+                rej_str = f" ({', '.join(rejected_names)})" if rejected_names else ""
+                try:
+                    await self.telegram.send_message(
+                        f"🛡️ [AI Sentinel Capital Protection]\n"
+                        f"All evaluated momentum candidates{rej_str} were rejected by AI due to active toxic risk/dilution.\n"
+                        f"• Capital 100% safely preserved in cash (0 trades executed today)."
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to send rejection notice: {e}")
 
         # Send Telegram Morning Intelligence Briefing
-        if self.telegram and self.ai and ai_mode in ("standard", "deep") and self.ai.is_configured:
+        if top_picks and self.telegram and self.ai and ai_mode in ("standard", "deep") and self.ai.is_configured:
             try:
                 top_item = top_picks[0]
                 runners_up = approved_candidates[1:3]
