@@ -235,3 +235,49 @@ async def test_screening_history_recorded_when_ai_rejects_all(monkeypatch, tmp_p
         assert last_rec["entered_ticker"] is None
         assert last_rec["counts"]["ai_rejected_traps"] == 1
         assert last_rec["counts"]["ai_approved"] == 0
+
+
+@pytest.mark.asyncio
+async def test_breakout_eod_exit_at_14_50_est(monkeypatch, tmp_path):
+    """Verify that open positions are liquidated at 14:50 EST to respect Toss 1-hour pre-close rule."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from breakout_strategy import ActivePosition
+    from exit_manager import ExitManager
+
+    NEW_YORK = ZoneInfo("America/New_York")
+    storage_file = str(tmp_path / "test_positions_eod.json")
+    broker = DummyBroker()
+    tg = DummyTelegramService()
+    runner = BreakoutStrategyRunner(broker, tg, storage_file=storage_file)
+
+    # 1. Position entered today at 10:00 EST
+    today_ny = datetime.now(NEW_YORK)
+    pos = ActivePosition(
+        ticker="HKD",
+        entry_price=1.00,
+        highest_price=1.02,
+        entry_time=today_ny.replace(hour=10, minute=0, second=0),
+        exit_manager=ExitManager(stop_loss_pct=-3.0),
+    )
+    runner.active_positions["HKD"] = pos
+
+    # Mock current NY time to 14:51 EST
+    mock_now = today_ny.replace(hour=14, minute=51, second=0)
+
+    class MockDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return mock_now
+
+    monkeypatch.setattr("breakout_strategy.datetime", MockDatetime)
+    monkeypatch.setenv("ROTATION_DRY_RUN", "0")
+
+    await runner.run_intraday_exit_loop(poll_interval_seconds=1)
+
+    # Position must have been sold via EOD exit
+    assert "HKD" not in runner.active_positions
+    assert len(broker.orders) == 1
+    assert broker.orders[0][0] == "SELL"
+    assert broker.orders[0][1] == "HKD"
+

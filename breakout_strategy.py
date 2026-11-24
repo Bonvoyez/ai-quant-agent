@@ -388,12 +388,13 @@ class BreakoutStrategyRunner:
                     )
 
                     # Pure Day-Trading EOD Rule:
-                    # 1. Any time on or after 15:50 EST on entry date (market close)
+                    # 1. Any time on or after 14:50 EST on entry date (Toss Securities enforces that fractional-share orders
+                    #    can only be placed up to 1 hour before market close; exiting at 14:50 EST guarantees fill before 15:00 cutoff)
                     # 2. ANY subsequent calendar day (leftover must be cleared immediately)
                     now_ny = datetime.now(NEW_YORK)
                     is_after_market_close = (
                         pos.entry_time.date() == now_ny.date()
-                        and (now_ny.hour > 15 or (now_ny.hour == 15 and now_ny.minute >= 50))
+                        and (now_ny.hour > 14 or (now_ny.hour == 14 and now_ny.minute >= 50))
                     )
                     is_subsequent_day = (pos.entry_time.date() < now_ny.date())
 
