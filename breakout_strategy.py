@@ -358,7 +358,7 @@ class BreakoutStrategyRunner:
 
         return entered_tickers
 
-    async def run_intraday_exit_loop(self, poll_interval_seconds: int = 60):
+    async def run_intraday_exit_loop(self, poll_interval_seconds: int = 15):
         self._monitoring_active = True
         logger.info("📡 [Snowball Strategy] Intraday trailing exit loop started.")
 

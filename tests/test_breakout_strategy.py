@@ -281,3 +281,19 @@ async def test_breakout_eod_exit_at_14_50_est(monkeypatch, tmp_path):
     assert broker.orders[0][0] == "SELL"
     assert broker.orders[0][1] == "HKD"
 
+
+def test_exit_manager_breakeven_stop():
+    """Verify that once peak >= +4.0%, dropping back to <= +0.2% triggers BREAKEVEN_STOP."""
+    from exit_manager import ExitManager
+
+    mgr = ExitManager()
+    # Peak +4.5%, currently +2.0% -> HOLD
+    action, _, _ = mgr.evaluate_exit(entry_price=10.0, current_price=10.20, highest_price_since_entry=10.45)
+    assert action == "HOLD"
+
+    # Peak +4.5%, drops to +0.1% -> SELL via BREAKEVEN_STOP
+    action, ratio, reason = mgr.evaluate_exit(entry_price=10.0, current_price=10.01, highest_price_since_entry=10.45)
+    assert action == "SELL"
+    assert ratio == 1.0
+    assert "BREAKEVEN_STOP_TRIGGERED" in reason
+

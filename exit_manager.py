@@ -10,10 +10,19 @@ from typing import Tuple
 
 
 class ExitManager:
-    def __init__(self, stop_loss_pct: float = -3.0, trailing_step_pct: float = 2.0, activation_gain_pct: float = 10.0):
+    def __init__(
+        self,
+        stop_loss_pct: float = -3.0,
+        trailing_step_pct: float = 2.0,
+        activation_gain_pct: float = 10.0,
+        breakeven_trigger_pct: float = 4.0,
+        breakeven_floor_pct: float = 0.2,
+    ):
         self.stop_loss_pct = stop_loss_pct
         self.trailing_step_pct = trailing_step_pct
         self.activation_gain_pct = activation_gain_pct
+        self.breakeven_trigger_pct = breakeven_trigger_pct
+        self.breakeven_floor_pct = breakeven_floor_pct
 
     def evaluate_exit(
         self,
@@ -37,7 +46,11 @@ class ExitManager:
         if current_return <= self.stop_loss_pct:
             return "SELL", 1.0, f"STOP_LOSS_TRIGGERED ({current_return:.2f}%)"
 
-        # 2. Dynamic Trailing Stop: Let profits run! Once peak >= +10.0%, exit when price pulls back -2.0% from intraday high
+        # 2. Breakeven Stop: Once peak >= +4.0%, raise floor to +0.2% to prevent winning trades from turning into losses
+        if peak_return >= self.breakeven_trigger_pct and current_return <= self.breakeven_floor_pct:
+            return "SELL", 1.0, f"BREAKEVEN_STOP_TRIGGERED (Peak: +{peak_return:.2f}%, Exit: +{current_return:.2f}%)"
+
+        # 3. Dynamic Trailing Stop: Let profits run! Once peak >= +10.0%, exit when price pulls back -2.0% from intraday high
         if peak_return >= self.activation_gain_pct:
             pullback_from_peak = ((highest_price_since_entry - current_price) / highest_price_since_entry) * 100.0
             if pullback_from_peak >= self.trailing_step_pct:
