@@ -230,20 +230,23 @@ class TossInvestService(BaseBroker):
         if "error" in data and data["error"].get("code") == "stock-restricted":
             logger.warning(f"⚠️ {ticker} 소수점 거래 제한 감지. 정수 주문(Quantity)으로 전환 시도.")
 
-            qty = int(budget_usd // price)
-            if qty < 1:
-                logger.error(f"❌ {ticker} 예산(${budget_usd})이 부족하여 1주도 살 수 없습니다.")
-                return False
+            for ratio in (0.98, 0.95, 0.90):
+                qty = int((budget_usd * ratio) // price)
+                if qty < 1:
+                    logger.error(f"❌ {ticker} 예산(${budget_usd})이 부족하여 1주도 살 수 없습니다.")
+                    return False
 
-            payload = {
-                "clientOrderId": str(uuid.uuid4()),
-                "symbol": ticker,
-                "side": "BUY",
-                "orderType": "MARKET",
-                "quantity": str(qty)
-            }
-            logger.info(f"📤 [2차 매수 시도 - 정수] Payload: {payload}")
-            data = await self._request("POST", "/api/v1/orders", json=payload)
+                payload = {
+                    "clientOrderId": str(uuid.uuid4()),
+                    "symbol": ticker,
+                    "side": "BUY",
+                    "orderType": "MARKET",
+                    "quantity": str(qty)
+                }
+                logger.info(f"📤 [2차 매수 시도 - 정수 ({int(ratio*100)}%)] Payload: {payload}")
+                data = await self._request("POST", "/api/v1/orders", json=payload)
+                if "error" not in data or data["error"].get("code") != "insufficient-buying-power":
+                    break
 
         logger.info(f"📥 [매수 주문 응답]: {data}")
         return "error" not in data and "result" in data
