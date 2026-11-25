@@ -246,7 +246,7 @@ class BreakoutStrategyRunner:
             approved_candidates = valid_candidates
 
         top_picks = approved_candidates[: self.max_positions]
-        if not top_picks:
+        if not approved_candidates:
             logger.info("ℹ️ [Breakout Strategy] 0 candidates approved for execution today. Recording screening audit to disk.")
             if self.telegram:
                 rejected_names = [item["ticker"] for item in valid_candidates if item.get("ai_audit") and not item["ai_audit"].get("is_safe", True)]
@@ -272,7 +272,9 @@ class BreakoutStrategyRunner:
                 logger.debug(f"Failed to send AI briefing: {tg_err}")
 
         entered_tickers = []
-        for pick in top_picks:
+        for pick in approved_candidates:
+            if len(self.active_positions) >= self.max_positions:
+                break
             score = pick["score"]
             ticker = pick["ticker"]
             if ticker in self.active_positions:
